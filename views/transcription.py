@@ -2,12 +2,17 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils.html import format_html
 from django.shortcuts import reverse
-from .mixins import TranscriptionDataValidationMixin
+from .mixins import TranscriptionDataValidationMixin, ReceiveTranscriptionMixin
 from pytube import YouTube
 from django.conf import settings
 import requests
 from django.middleware import csrf
-
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import json
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from notifications.signals import notify
 
 class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
     """
@@ -87,3 +92,46 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
         snippet = r.json()['items'][0]['snippet']
         return snippet['title'], snippet['thumbnails']['default']['url'], snippet['channelTitle']
 
+class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
+
+    api_token = settings.ASSEMBLY_API_TOKEN
+
+    def post(self, request, *args, **kwargs):
+        data = request.POST
+        video_id = data.get('video_id')
+        # this string allow to dynamically get any model instance
+        model_instance_str = data.get('model_instance_str')
+        transcription_field = data.get('transcription_field')
+        field_name = data.get('field_name')
+        edit_url = data.get("edit_url")
+
+        # validate data
+        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field)
+        if is_data_valid:
+            # encode model_instance_str, transcription_field, field_name to base 64
+            model_instance_str_b64 = urlsafe_base64_encode(force_bytes(model_instance_str))
+            transcription_field_b64 = urlsafe_base64_encode(force_bytes(transcription_field))
+            field_name_b64 = urlsafe_base64_encode(force_bytes(field_name))
+            edit_url_b64 = urlsafe_base64_encode(force_bytes(edit_url))
+
+            webhook_url = settings.BASE_URL + reverse('wagtail_transcription:receive_transcription', 
+            kwargs={'m':model_instance_str_b64, 't':transcription_field_b64, 'f':field_name_b64, 'e':edit_url_b64, 'v':video_id, 'u': request.user.id})
+            self.transcript_audio(data.get("audio_url"), webhook_url)
+
+        return JsonResponse(response_message)
+ 
+    def transcript_audio(self, audio_url, webhook_url):
+        # TRANSCRIPE UPLOADED FILE
+        endpoint = "https://api.assemblyai.com/v2/transcript"
+        json = {
+            "audio_url": audio_url,
+            "webhook_url": webhook_url,
+        }
+        headers = {
+            "authorization": self.api_token,
+            "content-type": "application/json",
+        }
+
+        r = requests.post(endpoint, json=json, headers=headers)
+        response = r.json()
+        return response
