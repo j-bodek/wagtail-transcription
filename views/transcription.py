@@ -135,3 +135,46 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
         r = requests.post(endpoint, json=json, headers=headers)
         response = r.json()
         return response
+
+@method_decorator(csrf_exempt, name='dispatch') #this allows to receive post request without csrf protection
+class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
+    api_token = settings.ASSEMBLY_API_TOKEN
+
+    def post(self, request, m, f, t, e, v, u, *args, **kwargs):
+        model_instance_str = force_str(urlsafe_base64_decode(m)) # get model-instance-str
+        transcription_field = force_str(urlsafe_base64_decode(t)) # get transcription-field
+        field_name = force_str(urlsafe_base64_decode(f)) # get field-name
+        edit_url = force_str(urlsafe_base64_decode(e))
+        video_id = v # get youtube video id
+        user_id = int(u) # get user id
+
+        try:
+            request_body = json.loads(request.body.decode('utf-8'))
+            status, transcript_id = request_body.get('status'), request_body.get('transcript_id')
+        except Exception:
+            status, transcript_id = None, None
+
+        try:
+            if status == 'completed' and transcript_id:
+                transcription_response = self.get_transcription(transcript_id)
+                words = transcription_response.get("words")
+                transcription_phrases = self.get_transcription_devided_by_phrases(words)
+                io_output = self.transcription_phrases_to_docx(transcription_phrases)
+                transcription_document = self.add_docx_to_wagtail_docs(io_output, video_id)
+                # add transcription_document to model_instance transcription field
+                model_instance = self.get_model_instance(model_instance_str)
+                setattr(model_instance, field_name, video_id)
+                setattr(model_instance, transcription_field, transcription_document)
+                model_instance.save()
+                # send notification
+                notification_message = self.get_notification_message(transcription_document=transcription_document, edit_url=edit_url, video_id=video_id)
+            else:
+                notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
+        except Exception as e:
+            print(e)
+            notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
+
+        # send notification
+        notify.send(sender=self.get_user(user_id), recipient=self.get_user(user_id), verb="Message", description=notification_message)
+        
+        return JsonResponse({"type":"success"})
