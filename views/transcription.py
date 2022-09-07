@@ -13,6 +13,7 @@ import json
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from notifications.signals import notify
+from wagtail_transcription.models import Transcription
 
 class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
     """
@@ -116,7 +117,13 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
             webhook_url = settings.BASE_URL + reverse('wagtail_transcription:receive_transcription', 
             kwargs={'m':model_instance_str_b64, 't':transcription_field_b64, 'f':field_name_b64, 'e':edit_url_b64, 'v':video_id, 'u': request.user.id})
-            self.transcript_audio(data.get("audio_url"), webhook_url)
+            response = self.transcript_audio(data.get("audio_url"), webhook_url)
+            if response.get('id') is not None:
+                # create transcription with completed=False
+                Transcription.objects.create(
+                    title=f"auto_transcription-{video_id}",
+                    video_id=video_id,
+                )
 
         return JsonResponse(response_message)
  
@@ -169,9 +176,13 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
                 # send notification
                 notification_message = self.get_notification_message(transcription_document=transcription_document, edit_url=edit_url, video_id=video_id)
             else:
+                # If error delete uncompleted Transcription
+                Transcription.objects.filter(video_id=video_id).delete()
                 notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
         except Exception as e:
             print(e)
+            # If error delete uncompleted Transcription
+            Transcription.objects.filter(video_id=video_id).delete()
             notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
 
         # send notification

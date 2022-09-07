@@ -3,7 +3,9 @@ from wagtail.admin.edit_handlers import (
     FieldPanel
 )
 from django.db import models
+from wagtail.snippets.models import register_snippet
 
+@register_snippet
 class Transcription(AbstractDocument):
     video_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     verified = models.BooleanField(default=False)

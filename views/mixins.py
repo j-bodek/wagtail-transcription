@@ -3,7 +3,6 @@ from docx import Document as docx_document
 import tempfile
 import io
 from django.core.files.base import File
-from wagtail.documents.models import Document
 import re
 import urllib
 from django.apps import apps
@@ -12,6 +11,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
+from wagtail_transcription.models import Transcription
+from wagtail_transcription.wagtail_hooks import TranscriptionAdmin
 
 
 class TranscriptionDataValidationMixin:
@@ -33,10 +34,15 @@ class TranscriptionDataValidationMixin:
             return False, {"type": "error", "message":f'Invalid youtube video id. Make sure it have exactly 11 characters, contains only numbers, letters or dashes'}, model_instance
         
         # check if transcription for video with same id exists
-        same_video_transcriptions = Document.objects.filter(title__endswith=video_id)
-        if same_video_transcriptions.exists():
-            return False, {"type": "error", "message":f'Transcription for video with id : "{video_id}" already exists. Check it <a target="_blank" href="{reverse("wagtaildocs:edit", args=(same_video_transcriptions.first().id ,))}">here</a>'}, model_instance
+        same_video_transcriptions = Transcription.objects.filter(video_id=video_id)
+        if same_video_transcriptions.filter(completed=True).exists():
+            return False, {"type": "error", "message":f'Transcription for video with id : "{video_id}" already exists. Check it <a target="_blank" href="{TranscriptionAdmin().url_helper.get_action_url("edit", same_video_transcriptions.first().id)}">here</a>'}, model_instance
 
+        # # check if transcription process for video with same id is running
+        if Transcription.objects.filter(video_id=video_id).filter(completed=False).exists():
+            return False, {"type": "error", "message":f'Transcription process for video with id : "{video_id}" is currently running'}, model_instance
+
+        # check if video with video_id exists
         try:
             yt_thumbnail_url = f"http://img.youtube.com/vi/{video_id}/mqdefault.jpg"
             width, _ = self.get_online_img_size(yt_thumbnail_url)
@@ -129,8 +135,11 @@ class ReceiveTranscriptionMixin:
 
     def add_docx_to_wagtail_docs(self, io_output, video_id):
         docx_file = File(io_output, name=f'auto_transcription-{video_id}.docx')
-        document_file = Document.objects.create(title=f"auto_transcription-{video_id}", file=docx_file)
-        return document_file
+        transcription = Transcription.objects.get(video_id=video_id)
+        transcription.file = docx_file
+        transcription.completed = True
+        transcription.save()
+        return transcription
 
     def get_notification_message(self, transcription_document=None, error=False, edit_url=None, video_id=None):
         """
