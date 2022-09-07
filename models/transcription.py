@@ -5,7 +5,7 @@ from wagtail.admin.edit_handlers import (
 from django.db import models
 
 class Transcription(AbstractDocument):
-    video_id = models.CharField(max_length=255, blank=True, null=True)
+    video_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     verified = models.BooleanField(default=False)
     completed = models.BooleanField(default=False)
     
