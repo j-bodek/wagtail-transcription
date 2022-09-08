@@ -16,6 +16,9 @@
 
 {% block js %}
     {{block.super}}
+    <script>
+        let processing_transcriptions_url = "{% url 'wagtail_transcription:processing_transcriptions' %}"
+    </script>
     <script src="{% static 'notifications/notify.js' %}" type="text/javascript"></script>
     <script src="{% static 'wagtail_transcription/js/widgets/notify.js' %}" type="text/javascript"></script>
     <script src="{% static 'wagtail_transcription/js/widgets/fetch_message.js' %}" type="text/javascript"></script>

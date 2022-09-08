@@ -60,7 +60,6 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
                         <input type="hidden" name="csrfmiddlewaretoken" value="{csrf.get_token(self.request)}">
                         <input type="hidden" name="video_id" value="{video_id}">
                         <input type="hidden" name="transcription_field" value="{transcription_field}">
-                        <input type="hidden" name="transcription_field_id" value="{transcription_field_id}">
                         <input type="hidden" name="field_name" value="{field_name}">
                         <input type="hidden" name="audio_url" value="{audio_url}">
                         <input type="hidden" name="audio_duration" value="{audio_duration}">
@@ -191,3 +190,10 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
         notify.send(sender=self.get_user(user_id), recipient=self.get_user(user_id), verb="Message", description=notification_message)
         
         return JsonResponse({"type":"success"})
+
+class GetProcessingTranscriptionsView(View):
+    
+    def get(self, request, *args, **kwargs):
+        transcriptions_video_ids = list(Transcription.objects.filter(completed=False).values_list('video_id', flat=True))
+        transcriptions_video_ids = {video_id:True for video_id in transcriptions_video_ids}
+        return JsonResponse(transcriptions_video_ids)

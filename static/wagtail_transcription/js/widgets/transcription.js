@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return cookieValue;
     }
 
-    function getAutoTranscription(fetch_message){
+    function getAutoTranscription(fetch_message, transcription_btn){
         let form = fetch_message.querySelector("form");
         fetch(form.action ,{
             method: 'POST',
@@ -26,8 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(response => response.json())
         .then(r => {
-            // if response message is success open edit source page and add source to publication
-            console.log(r)
+            if(r.type == 'success'){
+                transcription_btn.innerHTML = 'Transcription in process ...'
+            }
         });
         fetch_message.classList.toggle('hide');
     };
@@ -62,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if(r.type == 'success'){
                 fetch_message.querySelector('.continue_btn').addEventListener('click', e=>{
                     e.preventDefault();
-                    getAutoTranscription(fetch_message);
+                    getAutoTranscription(fetch_message, transcription_btn);
                 });
             }else if(r.type == 'error-id_exists'){
                 fetch_message.querySelector('.continue_btn').addEventListener('click', e=>{
@@ -85,6 +86,8 @@ document.addEventListener("DOMContentLoaded", () => {
     
     transcription_btns.forEach(btn=>{
         btn.addEventListener('click', e=>{
+            if (btn.dataset.active == 'false') return;
+
             let video_id_input = btn.parentNode.querySelector('input');
             let video_id = video_id_input.value;
             let action_url = btn.dataset.action_url;
