@@ -28,26 +28,28 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(r => {
             if(r.type == 'success'){
                 transcription_btn.innerHTML = 'Transcription in process ...'
+                transcription_btn.dataset.active = false;
+                ListenTranscriptionBtnsClicked();
             }
         });
         fetch_message.classList.toggle('hide');
     };
     
-    function validateTranscriptionData(transcription_btn, video_id, action_url, model_instance, transcription_field, transcription_field_id, field_name){
+    function validateTranscriptionData(transcription_btn, video_id){
         // create data that will be send
         const CreateData = new FormData();
         CreateData.append("video_id", video_id);
-        CreateData.append("model_instance", model_instance);
-        CreateData.append("transcription_field", transcription_field);
-        CreateData.append("transcription_field_id", transcription_field_id);
-        CreateData.append("field_name", field_name);
+        CreateData.append("model_instance", transcription_btn.dataset.model_instance);
+        CreateData.append("transcription_field", transcription_btn.dataset.transcription_field);
+        CreateData.append("transcription_field_id", transcription_btn.dataset.transcription_field_id);
+        CreateData.append("field_name", transcription_btn.dataset.field_name);
         CreateData.append("edit_url", window.location.href);
         CreateData.append("csrfmiddlewaretoken", getCookie('csrftoken'));
 
         // set ajax_send to true in order to provide sending another request
         ajax_send = true;
         // send post request to DataView
-        fetch(action_url,{
+        fetch(transcription_btn.dataset.action_url,{
             method: 'POST',
             body:CreateData,
         })
@@ -68,11 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }else if(r.type == 'error-id_exists'){
                 fetch_message.querySelector('.continue_btn').addEventListener('click', e=>{
                     fetch_message.classList.toggle('hide');
-                    let transcription_field_id = fetch_message.querySelector('.continue_btn').dataset.transcription_field_id
-                    let new_transcription_id = fetch_message.querySelector('.continue_btn').dataset.id
-                    let new_transcription_title = fetch_message.querySelector('.continue_btn').dataset.title
-                    let new_transcription_edit_url = fetch_message.querySelector('.continue_btn').dataset.edit_url
-                    ChangeTranscription(transcription_field_id, new_transcription_id, new_transcription_title, new_transcription_edit_url);
+                    ChangeTranscription(transcription_btn, video_id);
                 })
             }
         })
@@ -83,22 +81,21 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log(error);
         });
     };
-    
-    transcription_btns.forEach(btn=>{
-        btn.addEventListener('click', e=>{
-            if (btn.dataset.active == 'false') return;
 
-            let video_id_input = btn.parentNode.querySelector('input');
-            let video_id = video_id_input.value;
-            let action_url = btn.dataset.action_url;
-            let model_instance = btn.dataset.model_instance;
-            let transcription_field = btn.dataset.transcription_field;
-            let transcription_field_id = btn.dataset.transcription_field_id;
-            let field_name = btn.dataset.field_name;
-            btn.innerHTML = `<span class="lds-facebook"><div></div><div></div><div></div></span>`
-            if (!ajax_send) {
-                validateTranscriptionData(btn, video_id, action_url, model_instance, transcription_field, transcription_field_id, field_name)
-            }
+    function ListenTranscriptionBtnsClicked(){
+        transcription_btns.forEach(btn=>{
+            btn.addEventListener('click', e=>{
+                if (btn.dataset.active == 'false') return;
+    
+                let video_id = btn.parentNode.querySelector('input').value;
+                btn.innerHTML = `<span class="lds-facebook"><div></div><div></div><div></div></span>`
+                if (!ajax_send) {
+                    validateTranscriptionData(btn, video_id)
+                }
+            });
         });
-    });
+    }
+
+    ListenTranscriptionBtnsClicked();
+    
 });

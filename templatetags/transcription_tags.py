@@ -1,7 +1,6 @@
 from django import template
 from django.template.defaulttags import register
 from django.db import models
-from django.utils.html import format_html
 
 register = template.Library()
 

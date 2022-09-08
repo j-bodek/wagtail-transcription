@@ -36,7 +36,7 @@ class TranscriptionDataValidationMixin:
         # check if transcription for video with same id exists
         same_video_transcriptions = Transcription.objects.filter(video_id=video_id)
         if same_video_transcriptions.filter(completed=True).exists():
-            return False, {"class":"error", "type": "error-id_exists", "message":format_html(f'Transcription for video with id : "{video_id}" already exists. <span class="continue_btn" style="color:#007d7f; text-decoration:underline; cursor:pointer" data-transcription_field_id="{transcription_field_id}" data-id="{same_video_transcriptions.first().id}" data-edit_url="{TranscriptionAdmin().url_helper.get_action_url("edit", same_video_transcriptions.first().id)}" data-title="{same_video_transcriptions.first().title}">Add Existing Transcription</span>')}, model_instance
+            return False, {"class":"error", "type": "error-id_exists", "message":format_html(f'Transcription for video with id : "{video_id}" already exists. <span class="continue_btn" style="color:#007d7f; text-decoration:underline; cursor:pointer">Add Existing Transcription</span>')}, model_instance
 
         # # check if transcription process for video with same id is running
         if Transcription.objects.filter(video_id=video_id).filter(completed=False).exists():

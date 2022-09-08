@@ -14,6 +14,9 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from notifications.signals import notify
 from wagtail_transcription.models import Transcription
+import re
+from wagtail_transcription.wagtail_hooks import TranscriptionAdmin
+from django.shortcuts import get_object_or_404
 
 class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
     """
@@ -28,14 +31,13 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
         # this string allow to dynamically get any model instance
         model_instance_str = data.get('model_instance')
         transcription_field = data.get('transcription_field')
-        transcription_field_id = data.get('transcription_field_id')
         field_name = data.get('field_name')
         # validate data
-        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field, transcription_field_id)
-        response_message = self.format_response_message(video_id, edit_url, transcription_field, transcription_field_id, field_name, model_instance_str, is_data_valid, response_message)
+        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field)
+        response_message = self.format_response_message(video_id, edit_url, transcription_field, field_name, model_instance_str, is_data_valid, response_message)
         return JsonResponse(response_message)
 
-    def format_response_message(self, video_id, edit_url, transcription_field, transcription_field_id, field_name, model_instance_str, is_data_valid, response_message):
+    def format_response_message(self, video_id, edit_url, transcription_field, field_name, model_instance_str, is_data_valid, response_message):
         if not is_data_valid:
             message = format_html(f"""
                 <h3 style="color: #842e3c; margin:0"><b>{response_message.get("message")}</b></h3>
@@ -197,3 +199,19 @@ class GetProcessingTranscriptionsView(View):
         transcriptions_video_ids = list(Transcription.objects.filter(completed=False).values_list('video_id', flat=True))
         transcriptions_video_ids = {video_id:True for video_id in transcriptions_video_ids}
         return JsonResponse(transcriptions_video_ids)
+
+class GetTranscriptionData(View):
+    
+    def get(self, request, *args, **kwargs):
+        video_id = request.GET.get('video_id')
+        yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')
+        if not yt_id_regex.match(str(video_id)):
+            transcription = None
+        else:
+            transcription = get_object_or_404(Transcription, video_id=video_id)
+        if transcription:
+            return JsonResponse({
+                "new_transcription_id": None if not transcription else transcription.id,
+                "new_transcription_title": None if not transcription else transcription.title,
+                "new_transcription_edit_url": None if not transcription else TranscriptionAdmin().url_helper.get_action_url("edit", transcription.id),
+            })
