@@ -28,13 +28,14 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
         # this string allow to dynamically get any model instance
         model_instance_str = data.get('model_instance')
         transcription_field = data.get('transcription_field')
+        transcription_field_id = data.get('transcription_field_id')
         field_name = data.get('field_name')
         # validate data
-        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field)
-        response_message = self.format_response_message(video_id, edit_url, transcription_field, field_name, model_instance_str, is_data_valid, response_message)
+        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field, transcription_field_id)
+        response_message = self.format_response_message(video_id, edit_url, transcription_field, transcription_field_id, field_name, model_instance_str, is_data_valid, response_message)
         return JsonResponse(response_message)
 
-    def format_response_message(self, video_id, edit_url, transcription_field, field_name, model_instance_str, is_data_valid, response_message):
+    def format_response_message(self, video_id, edit_url, transcription_field, transcription_field_id, field_name, model_instance_str, is_data_valid, response_message):
         if not is_data_valid:
             message = format_html(f"""
                 <h3 style="color: #842e3c; margin:0"><b>{response_message.get("message")}</b></h3>
@@ -59,6 +60,7 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
                         <input type="hidden" name="csrfmiddlewaretoken" value="{csrf.get_token(self.request)}">
                         <input type="hidden" name="video_id" value="{video_id}">
                         <input type="hidden" name="transcription_field" value="{transcription_field}">
+                        <input type="hidden" name="transcription_field_id" value="{transcription_field_id}">
                         <input type="hidden" name="field_name" value="{field_name}">
                         <input type="hidden" name="audio_url" value="{audio_url}">
                         <input type="hidden" name="audio_duration" value="{audio_duration}">

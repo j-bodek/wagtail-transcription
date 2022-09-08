@@ -16,7 +16,7 @@ from wagtail_transcription.wagtail_hooks import TranscriptionAdmin
 
 
 class TranscriptionDataValidationMixin:
-    def data_validation(self, video_id, model_instance_str, transcription_field):
+    def data_validation(self, video_id, model_instance_str, transcription_field, transcription_field_id=None):
         
         # get app name, model name and instance id and check if it exists
         try:
@@ -26,21 +26,21 @@ class TranscriptionDataValidationMixin:
             getattr(model_instance, transcription_field)
         except (AttributeError, ValueError, LookupError):
             # If there is error independent from user display easy error message
-            return False, {"type": "error", "message":f'Something went wrong. Please try again or upload transcription manually'}, None
+            return False, {"class":"error", "type": "error", "message":f'Something went wrong. Please try again or upload transcription manually'}, None
 
         # check if video id is valid
         yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')
         if not yt_id_regex.match(video_id):
-            return False, {"type": "error", "message":f'Invalid youtube video id. Make sure it have exactly 11 characters, contains only numbers, letters or dashes'}, model_instance
+            return False, {"class":"error", "type": "error-invalid_id", "message":f'Invalid youtube video id. Make sure it have exactly 11 characters, contains only numbers, letters or dashes'}, model_instance
         
         # check if transcription for video with same id exists
         same_video_transcriptions = Transcription.objects.filter(video_id=video_id)
         if same_video_transcriptions.filter(completed=True).exists():
-            return False, {"type": "error", "message":f'Transcription for video with id : "{video_id}" already exists. Check it <a target="_blank" href="{TranscriptionAdmin().url_helper.get_action_url("edit", same_video_transcriptions.first().id)}">here</a>'}, model_instance
+            return False, {"class":"error", "type": "error-id_exists", "message":format_html(f'Transcription for video with id : "{video_id}" already exists. <span class="continue_btn" style="color:#007d7f; text-decoration:underline; cursor:pointer" data-transcription_field_id="{transcription_field_id}" data-id="{same_video_transcriptions.first().id}" data-edit_url="{TranscriptionAdmin().url_helper.get_action_url("edit", same_video_transcriptions.first().id)}" data-title="{same_video_transcriptions.first().title}">Add Existing Transcription</span>')}, model_instance
 
         # # check if transcription process for video with same id is running
         if Transcription.objects.filter(video_id=video_id).filter(completed=False).exists():
-            return False, {"type": "error", "message":f'Transcription process for video with id : "{video_id}" is currently running'}, model_instance
+            return False, {"class":"error", "type": "error-transcription_in_process", "message":f'Transcription process for video with id : "{video_id}" is currently running'}, model_instance
 
         # check if video with video_id exists
         try:
@@ -49,11 +49,11 @@ class TranscriptionDataValidationMixin:
             # HACK a mq thumbnail has width of 320.
             # if the video does not exist(therefore thumbnail don't exist), a default thumbnail of 120 width is returned.
             if width == 120:
-                return False, {"type": "error", "message":f'YouTube video with id : {video_id} does not exist'}, model_instance
+                return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {video_id} does not exist'}, model_instance
         except urllib.error.HTTPError:
-            return False, {"type": "error", "message":f'YouTube video with id : {video_id} does not exist'}, model_instance
+            return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {video_id} does not exist'}, model_instance
 
-        return True, {"type": "success"}, model_instance
+        return True, {"class":"success", "type": "success"}, model_instance
 
     def get_online_img_size(self, uri):
         """

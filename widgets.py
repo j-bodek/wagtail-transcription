@@ -8,7 +8,8 @@ class AutoVideoTranscriptionWidget(Input):
             )
         }
         js = [
-            "wagtail_transcription/js/widgets/transcription.js"
+            "wagtail_transcription/js/widgets/change_transcription_field.js",
+            "wagtail_transcription/js/widgets/transcription.js",
         ]
 
     input_type = "text"

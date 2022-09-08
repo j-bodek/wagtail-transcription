@@ -30,10 +30,19 @@ class VideoTranscriptionPanel(FieldPanel):
 
     class BoundPanel(FieldPanel.BoundPanel):
 
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            try:
+                transcription_bound_field = self.form[self.panel.transcription_field]
+                self.transcription_field_id = transcription_bound_field.field.widget.attrs.get("id") or transcription_bound_field.auto_id
+            except KeyError:
+                self.transcription_field_id = None
+
         def render_as_field(self):
             """
             Overwrite default method to add instance and field_name to widget attrs
             """
             self.bound_field.field.widget.attrs.update({'instance': self.instance})
             self.bound_field.field.widget.attrs.update({'field_name': self.field_name})
+            self.bound_field.field.widget.attrs.update({'transcription_field_id':self.transcription_field_id})
             return super().render_as_field()
