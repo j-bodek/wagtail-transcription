@@ -1,7 +1,6 @@
 
 function ChangeTranscription(transcription_btn, video_id){
     // Change transcription field choice
-
     fetch(transcription_btn.dataset.transcription_data_url + '?' + new URLSearchParams({video_id:video_id}) ,{
         method: 'GET',
     })
@@ -14,9 +13,16 @@ function ChangeTranscription(transcription_btn, video_id){
         let transcription_field = document.getElementById(transcription_field_id);
         if (transcription_field && new_transcription_id && transcription_field.value != new_transcription_id){
             transcription_field.value = new_transcription_id;
-            transcription_field.parentNode.querySelector('.title').innerHTML = new_transcription_title;
+            if (transcription_field.parentNode.querySelector('.title')){
+                // in wagtail 3
+                transcription_field.parentNode.querySelector('.title').innerHTML = new_transcription_title;
+            }else{
+                // in wagtail 4
+                transcription_field.parentNode.querySelector('.chooser__title').innerHTML = new_transcription_title;
+            }
             transcription_field.parentNode.querySelector('.chooser').classList.remove('blank');
             transcription_field.parentNode.querySelector('a.edit-link').href = new_transcription_edit_url;
+            transcription_field.parentNode.querySelector('a.edit-link').classList.remove('w-hidden');
         }
     });
 }

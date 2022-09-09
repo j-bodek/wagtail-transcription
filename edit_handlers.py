@@ -46,3 +46,13 @@ class VideoTranscriptionPanel(FieldPanel):
             self.bound_field.field.widget.attrs.update({'field_name': self.field_name})
             self.bound_field.field.widget.attrs.update({'transcription_field_id':self.transcription_field_id})
             return super().render_as_field()
+
+        def get_context_data(self, parent_context=None):
+            self.bound_field.field.widget.attrs.update({'instance': self.instance})
+            self.bound_field.field.widget.attrs.update({'field_name': self.field_name})
+            self.bound_field.field.widget.attrs.update({'transcription_field_id':self.transcription_field_id})
+            return super().get_context_data(parent_context)
+
+
+
+

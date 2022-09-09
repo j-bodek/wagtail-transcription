@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(response => response.json())
         .then(r => {
+            console.log(r)
             if(r.type == 'success'){
                 transcription_btn.innerHTML = 'Transcription in process ...'
                 transcription_btn.dataset.active = false;
@@ -39,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // create data that will be send
         const CreateData = new FormData();
         CreateData.append("video_id", video_id);
-        CreateData.append("model_instance", transcription_btn.dataset.model_instance);
+        CreateData.append("model_instance_str", transcription_btn.dataset.model_instance_str);
         CreateData.append("transcription_field", transcription_btn.dataset.transcription_field);
         CreateData.append("transcription_field_id", transcription_btn.dataset.transcription_field_id);
         CreateData.append("field_name", transcription_btn.dataset.field_name);

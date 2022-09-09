@@ -178,14 +178,17 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
                 # If error delete uncompleted Transcription
                 Transcription.objects.filter(video_id=video_id).delete()
                 notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
+                return JsonResponse({"type":"error"})
         except Exception as e:
             print(e)
             # If error delete uncompleted Transcription
             Transcription.objects.filter(video_id=video_id).delete()
             notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
+            return JsonResponse({"type":"error"})
 
         # send notification
         notify.send(sender=self.get_user(user_id), recipient=self.get_user(user_id), verb="Message", description=notification_message)
+        return JsonResponse({"type":"success"})
 
 class GetProcessingTranscriptionsView(View):
     """
