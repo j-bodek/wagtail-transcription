@@ -12,46 +12,50 @@ from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from wagtail_transcription.models import Transcription
-from wagtail_transcription.wagtail_hooks import TranscriptionAdmin
 
 
 class TranscriptionDataValidationMixin:
-    def data_validation(self, video_id, model_instance_str, transcription_field, transcription_field_id=None):
-        
+    """
+    Used to validate transcription data
+    """
+    def data_validation(self, data):
         # get app name, model name and instance id and check if it exists
         try:
-            app, model, instance_id = model_instance_str.split(':')
+            app, model, instance_id = data.get('model_instance_str').split(':')
             model_instance = apps.get_model(app, model).objects.get(id=str(instance_id))
             # check if model_instance has transcription_field field
-            getattr(model_instance, transcription_field)
+            getattr(model_instance, data.get('transcription_field'))
         except (AttributeError, ValueError, LookupError):
             # If there is error independent from user display easy error message
             return False, {"class":"error", "type": "error", "message":f'Something went wrong. Please try again or upload transcription manually'}, None
 
         # check if video id is valid
         yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')
-        if not yt_id_regex.match(video_id):
+        if not yt_id_regex.match(str(data.get('video_id'))):
             return False, {"class":"error", "type": "error-invalid_id", "message":f'Invalid youtube video id. Make sure it have exactly 11 characters, contains only numbers, letters or dashes'}, model_instance
         
         # check if transcription for video with same id exists
-        same_video_transcriptions = Transcription.objects.filter(video_id=video_id)
+        same_video_transcriptions = Transcription.objects.filter(video_id=data.get('video_id'))
         if same_video_transcriptions.filter(completed=True).exists():
-            return False, {"class":"error", "type": "error-id_exists", "message":format_html(f'Transcription for video with id : "{video_id}" already exists. <span class="continue_btn" style="color:#007d7f; text-decoration:underline; cursor:pointer">Add Existing Transcription</span>')}, model_instance
+            return False, {
+                "class":"error", "type": "error-id_exists", 
+                "message":format_html(f'Transcription for video with id : "{data.get("video_id")}" already exists. <span class="continue_btn" style="color:#007d7f; text-decoration:underline; cursor:pointer">Add Existing Transcription</span>')
+                }, model_instance
 
         # # check if transcription process for video with same id is running
-        if Transcription.objects.filter(video_id=video_id).filter(completed=False).exists():
-            return False, {"class":"error", "type": "error-transcription_in_process", "message":f'Transcription process for video with id : "{video_id}" is currently running'}, model_instance
+        if Transcription.objects.filter(video_id=data.get('video_id')).filter(completed=False).exists():
+            return False, {"class":"error", "type": "error-transcription_in_process", "message":f'Transcription process for video with id : "{data.get("video_id")}" is currently running'}, model_instance
 
         # check if video with video_id exists
         try:
-            yt_thumbnail_url = f"http://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+            yt_thumbnail_url = f"http://img.youtube.com/vi/{data.get('video_id')}/mqdefault.jpg"
             width, _ = self.get_online_img_size(yt_thumbnail_url)
             # HACK a mq thumbnail has width of 320.
             # if the video does not exist(therefore thumbnail don't exist), a default thumbnail of 120 width is returned.
             if width == 120:
-                return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {video_id} does not exist'}, model_instance
+                return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {data.get("video_id")} does not exist'}, model_instance
         except urllib.error.HTTPError:
-            return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {video_id} does not exist'}, model_instance
+            return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {data.get("video_id")} does not exist'}, model_instance
 
         return True, {"class":"success", "type": "success"}, model_instance
 
@@ -75,7 +79,10 @@ class TranscriptionDataValidationMixin:
         return None
 
 class ReceiveTranscriptionMixin:
-
+    """
+    Contains methods that help to clean transcripted audio data,
+    create transcription docx file and set it for Transcription object
+    """
     def get_user(self, user_id):
         return get_object_or_404(User, id=user_id)
 

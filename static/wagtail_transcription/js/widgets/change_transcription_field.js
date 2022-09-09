@@ -1,5 +1,7 @@
 
 function ChangeTranscription(transcription_btn, video_id){
+    // Change transcription field choice
+
     fetch(transcription_btn.dataset.transcription_data_url + '?' + new URLSearchParams({video_id:video_id}) ,{
         method: 'GET',
     })
@@ -20,6 +22,9 @@ function ChangeTranscription(transcription_btn, video_id){
 }
 
 function CheckNewAndRunningTranscriptions(transcription_btns){
+    // Check if new transcription is processing
+    // Hide processing transcription when it will complete
+
     fetch(processing_transcriptions_url ,{
         method: 'GET',
     })

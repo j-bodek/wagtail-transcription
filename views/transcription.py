@@ -26,29 +26,22 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
     """
     def post(self, request, *args, **kwargs):
         data = request.POST
-        video_id = data.get('video_id')
-        edit_url = data.get('edit_url')
-        # this string allow to dynamically get any model instance
-        model_instance_str = data.get('model_instance')
-        transcription_field = data.get('transcription_field')
-        field_name = data.get('field_name')
-        # validate data
-        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field)
-        response_message = self.format_response_message(video_id, edit_url, transcription_field, field_name, model_instance_str, is_data_valid, response_message)
+        is_data_valid, response_message, _ = self.data_validation(data)
+        response_message = self.format_response_message(data, is_data_valid, response_message)
         return JsonResponse(response_message)
 
-    def format_response_message(self, video_id, edit_url, transcription_field, field_name, model_instance_str, is_data_valid, response_message):
+    def format_response_message(self, data, is_data_valid, response_message):
         if not is_data_valid:
             message = format_html(f"""
                 <h3 style="color: #842e3c; margin:0"><b>{response_message.get("message")}</b></h3>
             """)
             response_message['message'] = message
         else:
-            audio_url, audio_duration = self.yt_audio_and_duration(video_id)
-            video_title, video_thumbnail, channel_name = self.get_youtube_video_data(video_id)
+            audio_url, audio_duration = self.yt_audio_and_duration(data.get('video_id'))
+            video_title, video_thumbnail, channel_name = self.get_youtube_video_data(data.get('video_id'))
             message = format_html(f"""
                 <h3 style="color: #0c622e; font-weight:bold">Transcription process will take about {self.format_seconds(audio_duration//1.25)}</h3>
-                <a href="https://www.youtube.com/watch?v={video_id}" target="_blank">
+                <a href="https://www.youtube.com/watch?v={data.get('video_id')}" target="_blank">
                     <div style="display: flex; background: #262626">
                         <img src="{video_thumbnail}" alt="{channel_name}-image">
                         <div style="padding-left: .5rem; padding-top: .5rem; height: fit-content;">
@@ -60,13 +53,13 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
                 <div style="display:flex; margin-top: 1rem; justify-content: right">
                     <form method="POST" action="{reverse('wagtail_transcription:request_transcription')}">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{csrf.get_token(self.request)}">
-                        <input type="hidden" name="video_id" value="{video_id}">
-                        <input type="hidden" name="transcription_field" value="{transcription_field}">
-                        <input type="hidden" name="field_name" value="{field_name}">
+                        <input type="hidden" name="video_id" value="{(data.get('video_id'))}">
+                        <input type="hidden" name="transcription_field" value="{(data.get('transcription_field'))}">
+                        <input type="hidden" name="field_name" value="{(data.get('field_name'))}">
                         <input type="hidden" name="audio_url" value="{audio_url}">
                         <input type="hidden" name="audio_duration" value="{audio_duration}">
-                        <input type="hidden" name="edit_url" value="{edit_url}">
-                        <input type="hidden" name="model_instance_str" value="{model_instance_str}">
+                        <input type="hidden" name="edit_url" value="{(data.get('edit_url'))}">
+                        <input type="hidden" name="model_instance_str" value="{(data.get('model_instance_str'))}">
                         <button class="continue_btn button action-save" action="button">Continue</button>
                     </form>
                 </div>
@@ -103,20 +96,15 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
     def post(self, request, *args, **kwargs):
         data = request.POST
         video_id = data.get('video_id')
-        # this string allow to dynamically get any model instance
-        model_instance_str = data.get('model_instance_str')
-        transcription_field = data.get('transcription_field')
-        field_name = data.get('field_name')
-        edit_url = data.get("edit_url")
 
         # validate data
-        is_data_valid, response_message, _ = self.data_validation(video_id, model_instance_str, transcription_field)
+        is_data_valid, response_message, _ = self.data_validation(data)
         if is_data_valid:
             # encode model_instance_str, transcription_field, field_name to base 64
-            model_instance_str_b64 = urlsafe_base64_encode(force_bytes(model_instance_str))
-            transcription_field_b64 = urlsafe_base64_encode(force_bytes(transcription_field))
-            field_name_b64 = urlsafe_base64_encode(force_bytes(field_name))
-            edit_url_b64 = urlsafe_base64_encode(force_bytes(edit_url))
+            model_instance_str_b64 = urlsafe_base64_encode(force_bytes(data.get('model_instance_str')))
+            transcription_field_b64 = urlsafe_base64_encode(force_bytes(data.get('transcription_field')))
+            field_name_b64 = urlsafe_base64_encode(force_bytes(data.get('field_name')))
+            edit_url_b64 = urlsafe_base64_encode(force_bytes(data.get('edit_url')))
 
             webhook_url = settings.BASE_URL + reverse('wagtail_transcription:receive_transcription', 
             kwargs={'m':model_instance_str_b64, 't':transcription_field_b64, 'f':field_name_b64, 'e':edit_url_b64, 'v':video_id, 'u': request.user.id})
@@ -131,7 +119,9 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
         return JsonResponse(response_message)
  
     def transcript_audio(self, audio_url, webhook_url):
-        # TRANSCRIPE UPLOADED FILE
+        """
+        Send transcription request to assemblyai
+        """
         endpoint = "https://api.assemblyai.com/v2/transcript"
         json = {
             "audio_url": audio_url,
@@ -148,9 +138,15 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
 @method_decorator(csrf_exempt, name='dispatch') #this allows to receive post request without csrf protection
 class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
+    """
+    This view is used to receive transcription response from assemblyai
+    and based on that create transcription object or display error
+    """
+
     api_token = settings.ASSEMBLY_API_TOKEN
 
     def post(self, request, m, f, t, e, v, u, *args, **kwargs):
+        # decode url parameters
         model_instance_str = force_str(urlsafe_base64_decode(m)) # get model-instance-str
         transcription_field = force_str(urlsafe_base64_decode(t)) # get transcription-field
         field_name = force_str(urlsafe_base64_decode(f)) # get field-name
@@ -190,17 +186,22 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
 
         # send notification
         notify.send(sender=self.get_user(user_id), recipient=self.get_user(user_id), verb="Message", description=notification_message)
-        
-        return JsonResponse({"type":"success"})
 
 class GetProcessingTranscriptionsView(View):
-    
+    """
+    Return ids of precessing transcriptions
+    """
+
     def get(self, request, *args, **kwargs):
         transcriptions_video_ids = list(Transcription.objects.filter(completed=False).values_list('video_id', flat=True))
         transcriptions_video_ids = {video_id:True for video_id in transcriptions_video_ids}
         return JsonResponse(transcriptions_video_ids)
 
 class GetTranscriptionData(View):
+    """
+    Return transcription id, title and edit url 
+    based od video_id
+    """
     
     def get(self, request, *args, **kwargs):
         video_id = request.GET.get('video_id')

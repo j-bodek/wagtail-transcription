@@ -20,8 +20,6 @@ class Transcription(AbstractDocument):
         FieldPanel("tags"),
     ]
 
-    # admin_form_fields = ("title", "video_id", "verified", "completed", "file", "collection", "tags")
-
     class Meta(AbstractDocument.Meta):
         permissions = [
             ("choose_document", "Can choose document"),
