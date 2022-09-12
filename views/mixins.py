@@ -159,7 +159,7 @@ class ReceiveTranscriptionMixin:
                 <p class="notification-close" data-action_url={reverse("wagtail_transcription:delete_notification")}><i class="bi bi-x"></i></p>
             </div>
             <div class="notification-message {'error' if error else ''}">
-                <a target="_blank" href="{edit_url}">Check Session Page</a>
+                <a target="_blank" href="{edit_url}">Check Page</a>
                 <a target="_blank" href="{f'https://www.youtube.com/watch?v={video_id}' if error else transcription_document.url}">{'Check video' if error else 'Download Transcription File <i class="bi bi-download"></i>'}</a>
             </div>
         """)
