@@ -21,8 +21,5 @@ class Transcription(AbstractDocument):
     ]
 
     class Meta(AbstractDocument.Meta):
-        permissions = [
-            ("choose_document", "Can choose document"),
-        ]
         verbose_name = "Transcription"
         verbose_name_plural = "Transcriptions"
