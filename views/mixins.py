@@ -109,7 +109,7 @@ class ReceiveTranscriptionMixin:
         minutes, start = start//60000, start - (start//60000) * 60000
         seconds, start = start//1000, start - (start//1000) * 1000
         miliseconds = start
-        return f"[{hours:02d}:{minutes:02d}:{seconds:02d}.{miliseconds}]"
+        return f"[{hours:02d}:{minutes:02d}:{seconds:02d}.{miliseconds:03d}]"
 
     def get_transcription_devided_by_phrases(self, words):
         phrases, phrase, speaker = [], [], None
