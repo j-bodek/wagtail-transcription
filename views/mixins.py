@@ -19,15 +19,23 @@ class TranscriptionDataValidationMixin:
     Used to validate transcription data
     """
     def data_validation(self, data):
-        # get app name, model name and instance id and check if it exists
+        # get app name, model name and if it exists
         try:
             app, model, instance_id = data.get('model_instance_str').split(':')
-            model_instance = apps.get_model(app, model).objects.get(id=str(instance_id))
-            # check if model_instance has transcription_field field
-            getattr(model_instance, data.get('transcription_field'))
-        except (AttributeError, ValueError, LookupError):
+            model = apps.get_model(app, model)
+        except (AttributeError, ValueError, LookupError) as e:
+            print(e)
             # If there is error independent from user display easy error message
             return False, {"class":"error", "type": "error", "message":f'Something went wrong. Please try again or upload transcription manually'}, None
+
+        # check if model_instance has transcription_field field
+        try:
+            model_instance = model.objects.get(id=str(instance_id))
+            getattr(model_instance, data.get('transcription_field'))
+        except (AttributeError, ValueError, LookupError) as e:
+            print(e)
+            # If there is error independent from user display easy error message
+            return False, {"class":"error", "type": "error", "message":f"Please create '{model.__name__}' object first. Transcription field doesn't work when creating new instance."}, None
 
         # check if video id is valid
         yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')

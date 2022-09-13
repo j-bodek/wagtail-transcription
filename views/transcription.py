@@ -157,7 +157,8 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
         try:
             request_body = json.loads(request.body.decode('utf-8'))
             status, transcript_id = request_body.get('status'), request_body.get('transcript_id')
-        except Exception:
+        except Exception as e:
+            print(e)
             status, transcript_id = None, None
 
         try:
