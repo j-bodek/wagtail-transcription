@@ -4,7 +4,7 @@ from wagtail.contrib.modeladmin.options import (
 )
 from wagtail import VERSION as WAGTAIL_VERSION
 from wagtail import hooks
-from wagtail_transcription.models.transcription import Transcription
+from .models import Transcription
 from wagtail.documents.wagtail_hooks import DocumentsMenuItem
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import reverse

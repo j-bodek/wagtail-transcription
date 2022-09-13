@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from wagtail_transcription.models import Transcription
+from ..models import Transcription
 
 
 class TranscriptionDataValidationMixin:

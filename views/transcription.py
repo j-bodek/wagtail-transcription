@@ -13,9 +13,9 @@ import json
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from notifications.signals import notify
-from wagtail_transcription.models import Transcription
+from ..models import Transcription
 import re
-from wagtail_transcription.wagtail_hooks import TranscriptionAdmin
+from ..wagtail_hooks import TranscriptionAdmin
 from django.shortcuts import get_object_or_404
 
 class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
@@ -213,9 +213,9 @@ class GetTranscriptionData(View):
             transcription = None
         else:
             transcription = get_object_or_404(Transcription, video_id=video_id)
-        if transcription:
-            return JsonResponse({
-                "new_transcription_id": None if not transcription else transcription.id,
-                "new_transcription_title": None if not transcription else transcription.title,
-                "new_transcription_edit_url": None if not transcription else TranscriptionAdmin().url_helper.get_action_url("edit", transcription.id),
-            })
+    
+        return JsonResponse({
+            "new_transcription_id": None if not transcription else transcription.id,
+            "new_transcription_title": None if not transcription else transcription.title,
+            "new_transcription_edit_url": None if not transcription else TranscriptionAdmin().url_helper.get_action_url("edit", transcription.id),
+        })
