@@ -214,9 +214,6 @@ dmypy.json
 # Cython Debug Symbols
 cython_debug/
 
-# Third Party Apps
-apps/
-
 # Local Settings
 local.py
 
@@ -274,6 +271,3 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-
-# google api config folder
-google_api_config/

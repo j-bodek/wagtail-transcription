@@ -1,0 +1,38 @@
+.fetch_message{
+    position:fixed; 
+    width: 450px; 
+    border-radius: 1rem; 
+    padding: 1rem; 
+    z-index: 100; 
+    left: 50%; 
+    top: 50%; 
+    transform: translate(-50%, -50%);
+}
+
+.fetch_message.error{
+    border: 1px solid #842e3c; 
+    background-color:  #f5c9d1; 
+}
+
+.fetch_message.success{
+    border: 1px solid #0c622e; 
+    background-color:  #b9e4ca; 
+}
+
+.fetch_message .close_btn{
+    position:absolute;
+    top:.25rem;
+    right:.25rem;
+    font-weight:bold;
+    font-size:1.25rem; 
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.fetch_message .close_btn:hover{
+    color: #292929
+}
+
+.hide{
+    display: none;
+}
