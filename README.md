@@ -28,6 +28,7 @@ python manage.py migrate
 ##### 2. Add wagtail-transcription urls
 Add following to your project urls.py
 ```
+from django.urls import include, path, re_path
 from wagtail_transcription import urls as wagtail_transcription_url
 import notifications.urls
 
@@ -71,7 +72,7 @@ from wagtail_transcription.edit_handlers import VideoTranscriptionPanel
 from wagtail_transcription.models import Transcription
 
 class YourModel(Orderable, models.Model):
-    video_id = video_id = models.CharField(max_length=255, blank=True)
+    video_id = models.CharField(max_length=255, blank=True)
     transcription = models.ForeignKey(
         Transcription,
         null=True,

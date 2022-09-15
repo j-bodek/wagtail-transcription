@@ -1,9 +1,6 @@
 [build-system]
 requires = [
     "setuptools>=42",
-    "wheel",
-    "wagtail>=2.15.5",
-    "django",
-    "django-notifications-hq',
+    "wheel"
 ]
 build-backend = "setuptools.build_meta"
