@@ -61,6 +61,9 @@ class TranscriptionAdmin(ModelAdmin):
                     submenu = SubMenu(menu_items)
                 return SubmenuMenuItem('Documents', submenu, classnames='doc-full-inverse', name='custom-documents')
         else:
+            """
+            Create Transcription menu item
+            """
             @hooks.register(menu_hook)
             def register_admin_menu_item():
                 return self.get_menu_item()

@@ -1,6 +1,17 @@
-{% load transcription_tags %}
+{% load transcription_tags static txtutils_tags %}
 
-<div style="width:100%">  
+{% if widget.attrs.custom_js%}
+    {% captureas custom_js %}{{widget.attrs.custom_js}}{% endcaptureas %}
+    <script src="{% static custom_js %}" type="text/javascript"></script>
+{% endif %}
+
+{% if widget.attrs.custom_css %}
+    {% captureas custom_css %}{{widget.attrs.custom_css}}{% endcaptureas %}
+    <link rel="stylesheet" href="{% static custom_css %}">
+{% endif %}
+
+
+<div class="{{ widget.attrs.custom_class }}" style="width:100%">  
     <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %} style="display:inline-block; width:auto">
     <button type="button" name="auto-transcription-btn" data-model_instance_str="{{ widget.attrs.instance|get_app_model_id }}" data-transcription_field="{{widget.attrs.transcription_field}}" data-field_name="{{widget.attrs.field_name}}" data-transcription_field_id="{{widget.attrs.transcription_field_id}}" data-action_url="{% url 'wagtail_transcription:validate_transcription_data' %}" data-transcription_data_url="{% url 'wagtail_transcription:transcription_data' %}" class="button-transcription">Auto Transcription</button>
 </div>
