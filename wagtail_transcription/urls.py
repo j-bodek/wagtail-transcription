@@ -9,7 +9,13 @@ from .views import (
     GetTranscriptionData
 )
 from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.module_loading import import_string
+from django.conf import settings
 
+if hasattr(settings, 'RECEIVE_TRANSCRIPTION_VIEW'):
+    ReceiveTranscriptionView = import_string(settings.RECEIVE_TRANSCRIPTION)
+if hasattr(settings, 'REQUEST_TRANSCRIPTION_VIEW'):
+    RequestTranscriptionView = import_string(settings.REQUEST_TRANSCRIPTION_VIEW)
 
 app_name = 'wagtail_transcription'
 urlpatterns = [

@@ -108,7 +108,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
             webhook_url = settings.BASE_URL + reverse('wagtail_transcription:receive_transcription', 
             kwargs={'m':model_instance_str_b64, 't':transcription_field_b64, 'f':field_name_b64, 'e':edit_url_b64, 'v':video_id, 'u': request.user.id})
-            response = self.transcript_audio(data.get("audio_url"), webhook_url)
+            response = self.request_audio_transcription(data.get("audio_url"), webhook_url)
             if response.get('id') is not None:
                 # create transcription with completed=False
                 Transcription.objects.create(
@@ -118,7 +118,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
         return JsonResponse(response_message)
  
-    def transcript_audio(self, audio_url, webhook_url):
+    def request_audio_transcription(self, audio_url, webhook_url):
         """
         Send transcription request to assemblyai
         """
@@ -164,16 +164,8 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
         try:
             if status == 'completed' and transcript_id:
                 transcription_response = self.get_transcription(transcript_id)
-                words = transcription_response.get("words")
-                transcription_phrases = self.get_transcription_devided_by_phrases(words)
-                io_output = self.transcription_phrases_to_docx(transcription_phrases)
-                transcription_document = self.add_docx_to_wagtail_docs(io_output, video_id)
-                # add transcription_document to model_instance transcription field
-                model_instance = self.get_model_instance(model_instance_str)
-                setattr(model_instance, field_name, video_id)
-                setattr(model_instance, transcription_field, transcription_document)
-                model_instance.save()
-                # send notification
+                # process transcription
+                transcription_document = self.process_transcription_response(transcription_response)
                 notification_message = self.get_notification_message(transcription_document=transcription_document, edit_url=edit_url, video_id=video_id)
             else:
                 # If error delete uncompleted Transcription
@@ -190,6 +182,27 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
         # send notification
         notify.send(sender=self.get_user(user_id), recipient=self.get_user(user_id), verb="Message", description=notification_message)
         return JsonResponse({"type":"success"})
+
+    def process_transcription_response(self, transcription_response, video_id, model_instance_str, field_name, transcription_field):
+        """
+        transcription_response - AssemblyAi response with transcription data https://www.assemblyai.com/docs/walkthroughs#getting-the-transcription-result
+        video_id - id of youtube video for which transcription was made
+        model_instance_str - string that allow to get model instance "app:model_name:instance_id"
+        field_name = name of field with video_id
+        transcription_field = name of field for transcription
+        """
+        words = transcription_response.get("words")
+        transcription_string = self.process_transcription_words(words)
+        io_output = self.transcription_string_to_docx(transcription_string)
+        transcription_document = self.add_docx_to_wagtail_docs(io_output, video_id)
+        # add transcription_document to model_instance transcription field
+        model_instance = self.get_model_instance(model_instance_str)
+        setattr(model_instance, field_name, video_id)
+        setattr(model_instance, transcription_field, transcription_document)
+        model_instance.save()
+
+        return transcription_document
+    
 
 class GetProcessingTranscriptionsView(View):
     """

@@ -135,7 +135,7 @@ class ReceiveTranscriptionMixin:
         phrases.append({**speaker, 'phrase':' '.join(phrase)})
         return phrases
 
-    def transcription_phrases_to_docx(self, transcription_phrases):
+    def transcription_string_to_docx(self, transcription_phrases):
         document = docx_document()
         with tempfile.NamedTemporaryFile() as tmp:
             for phrase in transcription_phrases:
