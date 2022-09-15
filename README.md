@@ -89,10 +89,63 @@ class YourModel(Orderable, models.Model):
     ]
 ```
 **video_id** field accept only youtube video id (not urls).<br/>
-**VideoTranscriptionPanel** takes two arguments:
+**VideoTranscriptionPanel** takes five arguments:
 - field_name - name of field for video_id
 - transcription_field - name of transcription field
+- custom_class - class of transcription widget
+- custom_css - custom css that will be loaded with transcritpion widget
+- custom_js - custom js that will be loaded with transcritpion widget
 
 <b style="color:red;">IMPORTANT</b>
 You can only generate a transcript on an existing object, if you try to do this in page creation view you will get an error.
 
+## Customization
+To be more comfortable with customization checkout [AssemblyAi Docs](https://www.assemblyai.com/docs/ "AssemblyAi Docs")
+#### Add custom Transcription Widget class, css and js
+In your VideoTranscriptionPanel add
+```
+VideoTranscriptionPanel('video_id', transcription_field='transcription', custom_class='custom_transcription', custom_css='app_name/css/custom_transcription.css', custom_js='app_name/js/custom_transcription.js'),
+```
+
+#### Add custom RequestTranscriptionView
+In your settings add
+```
+REQUEST_TRANSCRIPTION_VIEW = "app_name.module_name.YourRequestTranscriptionView"
+```
+You can easily overwrite how request to AssemblyAi is send by overwriteing request_audio_transcription method
+```
+from wagtail_transcription.views import RequestTranscriptionView
+class YourRequestTranscriptionView(RequestTranscriptionView):
+
+    def request_audio_transcription(self, audio_url, webhook_url):
+        """
+		Your awesome request logic
+		"""
+        return response
+```
+
+#### Add custom ReceiveTranscriptionView
+In your settings add
+```
+RECEIVE_TRANSCRIPTION_VIEW = "app_name.module_name.YourReceiveTranscriptionView"
+```
+Now you can easily overwrite how request with transcription is processed
+
+```
+from wagtail_transcription.views import ReceiveTranscriptionView
+
+class YourReceiveTranscriptionView(ReceiveTranscriptionView):
+
+    def process_transcription_response(self, transcription_response, 	video_id, model_instance_str, field_name, transcription_field):
+        """
+        transcription_response - AssemblyAi response with transcription data 
+        video_id - id of youtube video for which transcription was made
+        model_instance_str - string that allow to get model instance "app:model_name:instance_id"
+        field_name = name of field with video_id
+        transcription_field = name of field for transcription
+        """
+        ...
+		Your transcription processing logic here
+		...
+		super().process_transcription_response(transcription_response, 	video_id, model_instance_str, field_name, transcription_field)
+```
