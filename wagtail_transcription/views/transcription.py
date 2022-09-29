@@ -40,7 +40,7 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
             audio_url, audio_duration = self.yt_audio_and_duration(data.get('video_id'))
             video_title, video_thumbnail, channel_name = self.get_youtube_video_data(data.get('video_id'))
             # generate video info popup content
-            message = format_html(f"""
+            TRANSCRIPTION_VIDEO_INFO_POPUP = f"""
                 <h3 style="color: #0c622e; font-weight:bold">
                     Transcription process will take about 
                     {self.format_seconds(audio_duration//1.25)}
@@ -71,7 +71,8 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
                         <button class="continue_btn button action-save" action="button">Continue</button>
                     </form>
                 </div>
-            """)
+            """
+            message = format_html(TRANSCRIPTION_VIDEO_INFO_POPUP)
             response_message['message'] = message
 
         return response_message

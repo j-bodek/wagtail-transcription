@@ -12,7 +12,9 @@ from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from ..models import Transcription
+from wagtail_transcription.utils.validation_errors import TranscriptionValidationErrors
 
+TRANSCRIPTION_VALIDATION_ERRORS = TranscriptionValidationErrors()
 
 class TranscriptionDataValidationMixin:
     """
@@ -26,16 +28,7 @@ class TranscriptionDataValidationMixin:
         except (AttributeError, ValueError, LookupError) as e:
             print(e)
             # If there is error independent from user display easy error message
-            return (
-                    False, 
-                    {
-                        "class":"error", 
-                        "type": "error", 
-                        "message":f"""Something went wrong. 
-                        Please try again or upload transcription manually"""
-                    }, 
-                    None
-                )
+            return TRANSCRIPTION_VALIDATION_ERRORS.GENERAL_ERROR_MESSAGE()
 
         # check if model_instance has transcription_field field
         try:
@@ -44,66 +37,32 @@ class TranscriptionDataValidationMixin:
         except (AttributeError, ValueError, LookupError) as e:
             print(e)
             # If there is error independent from user display easy error message
-            return (
-                False, 
-                {
-                    "class":"error", 
-                    "type": "error", 
-                    "message":f"""Please create '{model.__name__}' object first. 
-                    Transcription field doesn't work when creating new instance."""
-                }, 
-                None
+            return TRANSCRIPTION_VALIDATION_ERRORS.NO_INSTANCE(
+                model_name=model.__name__
             )
 
         # check if video id is valid
         yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')
         if not yt_id_regex.match(str(data.get('video_id'))):
-            return (
-                False, 
-                {
-                    "class":"error", 
-                    "type": "error-invalid_id", 
-                    "message":f"""Invalid youtube video id. 
-                    Make sure it have exactly 11 characters, 
-                    contains only numbers, 
-                    letters or dashes"""
-                }, 
-                model_instance
+            return TRANSCRIPTION_VALIDATION_ERRORS.INVALID_VIDEO_ID(
+                model_instance=model_instance
             )
         
         # check if transcription for video with same id exists
         same_video_transcriptions = Transcription.objects.filter(video_id=data.get('video_id'))
         if same_video_transcriptions.filter(completed=True).exists():
-            return (
-                False, 
-                {
-                    "class":"error", 
-                    "type": "error-id_exists", 
-                    "message":format_html(
-                        f"""Transcription for video with id : 
-                        "{data.get("video_id")}" already exists. 
-                        <span class="continue_btn" style="color:#007d7f; 
-                        text-decoration:underline; cursor:pointer">
-                            Add Existing Transcription
-                        </span>"""
-                    )
-                }, 
-                model_instance
+           return TRANSCRIPTION_VALIDATION_ERRORS.EXISTING_SAME_VIDEO_TRANSCRIPTION(
+                model_instance=model_instance,
+                video_id=data.get('video_id')
             )
 
         # # check if transcription process for video with same id is running
-        if Transcription.objects.filter(video_id=data.get('video_id')).filter(completed=False).exists():
-            return (
-                False, 
-                {
-                    "class":"error", 
-                    "type": "error-transcription_in_process", 
-                    "message":f"""Transcription process for video with id : 
-                    "{data.get("video_id")}" is currently running"""
-                }, 
-                model_instance
+        if Transcription.objects.filter(video_id=data.get('video_id')
+        ).filter(completed=False).exists():
+           return TRANSCRIPTION_VALIDATION_ERRORS.TRANSCRIPTION_IS_RUNNING(
+                model_instance=model_instance,
+                video_id=data.get('video_id')
             )
-
         # check if video with video_id exists
         try:
             yt_thumbnail_url = f"http://img.youtube.com/vi/{data.get('video_id')}/mqdefault.jpg"
@@ -111,28 +70,16 @@ class TranscriptionDataValidationMixin:
             # HACK a mq thumbnail has width of 320.
             # if the video does not exist(therefore thumbnail don't exist), a default thumbnail of 120 width is returned.
             if width == 120:
-                return (
-                    False, 
-                    {
-                        "class":"error", 
-                        "type": "error-video_doesnt_exist", 
-                        "message":f"""YouTube video with id : {data.get("video_id")}
-                         does not exist"""
-                    }, 
-                    model_instance
+                return TRANSCRIPTION_VALIDATION_ERRORS.NOT_EXISTING_VIDEO(
+                    model_instance=model_instance,
+                    video_id=data.get('video_id')
                 )
         except urllib.error.HTTPError:
-            return (
-                False, 
-                {
-                    "class":"error", 
-                    "type": "error-video_doesnt_exist", 
-                    "message":f"""YouTube video with id : {data.get("video_id")}
-                     does not exist"""
-                }, 
-                model_instance
+            return TRANSCRIPTION_VALIDATION_ERRORS.NOT_EXISTING_VIDEO(
+                model_instance=model_instance,
+                video_id=data.get('video_id')
             )
-
+            
         return True, {"class":"success", "type": "success"}, model_instance
 
     def get_online_img_size(self, uri):
