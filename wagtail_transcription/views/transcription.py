@@ -39,14 +39,22 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
         else:
             audio_url, audio_duration = self.yt_audio_and_duration(data.get('video_id'))
             video_title, video_thumbnail, channel_name = self.get_youtube_video_data(data.get('video_id'))
+            # generate video info popup content
             message = format_html(f"""
-                <h3 style="color: #0c622e; font-weight:bold">Transcription process will take about {self.format_seconds(audio_duration//1.25)}</h3>
+                <h3 style="color: #0c622e; font-weight:bold">
+                    Transcription process will take about 
+                    {self.format_seconds(audio_duration//1.25)}
+                </h3>
                 <a href="https://www.youtube.com/watch?v={data.get('video_id')}" target="_blank">
                     <div style="display: flex; background: #262626">
                         <img src="{video_thumbnail}" alt="{channel_name}-image">
                         <div style="padding-left: .5rem; padding-top: .5rem; height: fit-content;">
-                            <p style="font-size:14px; line-height:1; margin:0; color: white;">{video_title}</p>
-                            <p style="font-size:12px; color:#a3a3a3; margin: 0; margin-top: .25rem">{channel_name}</p>
+                            <p style="font-size:14px; line-height:1; margin:0; color: white;">
+                                {video_title}
+                            </p>
+                            <p style="font-size:12px; color:#a3a3a3; margin: 0; margin-top: .25rem">
+                                {channel_name}
+                            </p>
                         </div>
                     </div>
                 </a>
@@ -101,13 +109,31 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
         is_data_valid, response_message, _ = self.data_validation(data)
         if is_data_valid:
             # encode model_instance_str, transcription_field, field_name to base 64
-            model_instance_str_b64 = urlsafe_base64_encode(force_bytes(data.get('model_instance_str')))
-            transcription_field_b64 = urlsafe_base64_encode(force_bytes(data.get('transcription_field')))
-            field_name_b64 = urlsafe_base64_encode(force_bytes(data.get('field_name')))
-            edit_url_b64 = urlsafe_base64_encode(force_bytes(data.get('edit_url')))
+            model_instance_str_b64 = urlsafe_base64_encode(
+                force_bytes(data.get('model_instance_str'))
+            )
+            transcription_field_b64 = urlsafe_base64_encode(
+                force_bytes(data.get('transcription_field'))
+            )
+            field_name_b64 = urlsafe_base64_encode(
+                force_bytes(data.get('field_name'))
+            )
+            edit_url_b64 = urlsafe_base64_encode(
+                force_bytes(data.get('edit_url'))
+            )
 
-            webhook_url = settings.BASE_URL + reverse('wagtail_transcription:receive_transcription', 
-            kwargs={'m':model_instance_str_b64, 't':transcription_field_b64, 'f':field_name_b64, 'e':edit_url_b64, 'v':video_id, 'u': request.user.id})
+            webhook_url = settings.BASE_URL + reverse(
+                'wagtail_transcription:receive_transcription', 
+                kwargs={
+                    'm':model_instance_str_b64, 
+                    't':transcription_field_b64, 
+                    'f':field_name_b64, 
+                    'e':edit_url_b64, 
+                    'v':video_id, 
+                    'u': request.user.id
+                }
+            )
+                
             response = self.request_audio_transcription(data.get("audio_url"), webhook_url)
             if response.get('id') is not None:
                 # create transcription with completed=False
@@ -156,7 +182,8 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
 
         try:
             request_body = json.loads(request.body.decode('utf-8'))
-            status, transcript_id = request_body.get('status'), request_body.get('transcript_id')
+            status = request_body.get('status')
+            transcript_id = request_body.get('transcript_id')
         except Exception as e:
             print(e)
             status, transcript_id = None, None
@@ -165,25 +192,55 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
             if status == 'completed' and transcript_id:
                 transcription_response = self.get_transcription(transcript_id)
                 # process transcription
-                transcription_document = self.process_transcription_response(transcription_response)
-                notification_message = self.get_notification_message(transcription_document=transcription_document, edit_url=edit_url, video_id=video_id)
+                transcription_document = self.process_transcription_response(
+                    transcription_response=transcription_response,
+                    video_id=video_id, 
+                    model_instance_str=model_instance_str, 
+                    field_name=field_name, 
+                    transcription_field=transcription_field
+                )
+                notification_message = self.get_notification_message(
+                    transcription_document=transcription_document, 
+                    edit_url=edit_url, 
+                    video_id=video_id
+                )
             else:
                 # If error delete uncompleted Transcription
                 Transcription.objects.filter(video_id=video_id).delete()
-                notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
+                notification_message = self.get_notification_message(
+                    error=True, 
+                    edit_url=edit_url, 
+                    video_id=video_id
+                )
                 return JsonResponse({"type":"error"})
         except Exception as e:
             print(e)
             # If error delete uncompleted Transcription
             Transcription.objects.filter(video_id=video_id).delete()
-            notification_message = self.get_notification_message(error=True, edit_url=edit_url, video_id=video_id)
+            notification_message = self.get_notification_message(
+                error=True, 
+                edit_url=edit_url, 
+                video_id=video_id
+            )
             return JsonResponse({"type":"error"})
 
         # send notification
-        notify.send(sender=self.get_user(user_id), recipient=self.get_user(user_id), verb="Message", description=notification_message)
+        notify.send(
+            sender=self.get_user(user_id), 
+            recipient=self.get_user(user_id), 
+            verb="Message", 
+            description=notification_message
+        )
         return JsonResponse({"type":"success"})
 
-    def process_transcription_response(self, transcription_response, video_id, model_instance_str, field_name, transcription_field):
+    def process_transcription_response(
+        self,
+        transcription_response, 
+        video_id, 
+        model_instance_str, 
+        field_name, 
+        transcription_field
+    ):
         """
         transcription_response - AssemblyAi response with transcription data https://www.assemblyai.com/docs/walkthroughs#getting-the-transcription-result
         video_id - id of youtube video for which transcription was made
@@ -210,7 +267,10 @@ class GetProcessingTranscriptionsView(View):
     """
 
     def get(self, request, *args, **kwargs):
-        transcriptions_video_ids = list(Transcription.objects.filter(completed=False).values_list('video_id', flat=True))
+        transcriptions_video_ids = list(Transcription.objects.filter(
+            completed=False
+        ).values_list('video_id', flat=True))
+
         transcriptions_video_ids = {video_id:True for video_id in transcriptions_video_ids}
         return JsonResponse(transcriptions_video_ids)
 
@@ -231,5 +291,8 @@ class GetTranscriptionData(View):
         return JsonResponse({
             "new_transcription_id": None if not transcription else transcription.id,
             "new_transcription_title": None if not transcription else transcription.title,
-            "new_transcription_edit_url": None if not transcription else TranscriptionAdmin().url_helper.get_action_url("edit", transcription.id),
+            "new_transcription_edit_url": None if not transcription else 
+            TranscriptionAdmin().url_helper.get_action_url(
+                "edit", transcription.id
+            ),
         })

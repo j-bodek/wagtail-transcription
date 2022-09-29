@@ -26,7 +26,16 @@ class TranscriptionDataValidationMixin:
         except (AttributeError, ValueError, LookupError) as e:
             print(e)
             # If there is error independent from user display easy error message
-            return False, {"class":"error", "type": "error", "message":f'Something went wrong. Please try again or upload transcription manually'}, None
+            return (
+                    False, 
+                    {
+                        "class":"error", 
+                        "type": "error", 
+                        "message":f"""Something went wrong. 
+                        Please try again or upload transcription manually"""
+                    }, 
+                    None
+                )
 
         # check if model_instance has transcription_field field
         try:
@@ -35,24 +44,65 @@ class TranscriptionDataValidationMixin:
         except (AttributeError, ValueError, LookupError) as e:
             print(e)
             # If there is error independent from user display easy error message
-            return False, {"class":"error", "type": "error", "message":f"Please create '{model.__name__}' object first. Transcription field doesn't work when creating new instance."}, None
+            return (
+                False, 
+                {
+                    "class":"error", 
+                    "type": "error", 
+                    "message":f"""Please create '{model.__name__}' object first. 
+                    Transcription field doesn't work when creating new instance."""
+                }, 
+                None
+            )
 
         # check if video id is valid
         yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')
         if not yt_id_regex.match(str(data.get('video_id'))):
-            return False, {"class":"error", "type": "error-invalid_id", "message":f'Invalid youtube video id. Make sure it have exactly 11 characters, contains only numbers, letters or dashes'}, model_instance
+            return (
+                False, 
+                {
+                    "class":"error", 
+                    "type": "error-invalid_id", 
+                    "message":f"""Invalid youtube video id. 
+                    Make sure it have exactly 11 characters, 
+                    contains only numbers, 
+                    letters or dashes"""
+                }, 
+                model_instance
+            )
         
         # check if transcription for video with same id exists
         same_video_transcriptions = Transcription.objects.filter(video_id=data.get('video_id'))
         if same_video_transcriptions.filter(completed=True).exists():
-            return False, {
-                "class":"error", "type": "error-id_exists", 
-                "message":format_html(f'Transcription for video with id : "{data.get("video_id")}" already exists. <span class="continue_btn" style="color:#007d7f; text-decoration:underline; cursor:pointer">Add Existing Transcription</span>')
-                }, model_instance
+            return (
+                False, 
+                {
+                    "class":"error", 
+                    "type": "error-id_exists", 
+                    "message":format_html(
+                        f"""Transcription for video with id : 
+                        "{data.get("video_id")}" already exists. 
+                        <span class="continue_btn" style="color:#007d7f; 
+                        text-decoration:underline; cursor:pointer">
+                            Add Existing Transcription
+                        </span>"""
+                    )
+                }, 
+                model_instance
+            )
 
         # # check if transcription process for video with same id is running
         if Transcription.objects.filter(video_id=data.get('video_id')).filter(completed=False).exists():
-            return False, {"class":"error", "type": "error-transcription_in_process", "message":f'Transcription process for video with id : "{data.get("video_id")}" is currently running'}, model_instance
+            return (
+                False, 
+                {
+                    "class":"error", 
+                    "type": "error-transcription_in_process", 
+                    "message":f"""Transcription process for video with id : 
+                    "{data.get("video_id")}" is currently running"""
+                }, 
+                model_instance
+            )
 
         # check if video with video_id exists
         try:
@@ -61,9 +111,27 @@ class TranscriptionDataValidationMixin:
             # HACK a mq thumbnail has width of 320.
             # if the video does not exist(therefore thumbnail don't exist), a default thumbnail of 120 width is returned.
             if width == 120:
-                return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {data.get("video_id")} does not exist'}, model_instance
+                return (
+                    False, 
+                    {
+                        "class":"error", 
+                        "type": "error-video_doesnt_exist", 
+                        "message":f"""YouTube video with id : {data.get("video_id")}
+                         does not exist"""
+                    }, 
+                    model_instance
+                )
         except urllib.error.HTTPError:
-            return False, {"class":"error", "type": "error-video_doesnt_exist", "message":f'YouTube video with id : {data.get("video_id")} does not exist'}, model_instance
+            return (
+                False, 
+                {
+                    "class":"error", 
+                    "type": "error-video_doesnt_exist", 
+                    "message":f"""YouTube video with id : {data.get("video_id")}
+                     does not exist"""
+                }, 
+                model_instance
+            )
 
         return True, {"class":"success", "type": "success"}, model_instance
 
@@ -119,15 +187,21 @@ class ReceiveTranscriptionMixin:
         miliseconds = start
         return f"[{hours:02d}:{minutes:02d}:{seconds:02d}.{miliseconds:03d}]"
 
-    def get_transcription_devided_by_phrases(self, words):
+    def process_transcription_words(self, words):
         phrases, phrase, speaker = [], [], None
         for word in words:
             if not speaker: 
-                speaker = {'start':self.format_start_time(word['start']), 'speaker':word['speaker']}
+                speaker = {
+                    'start':self.format_start_time(word['start']), 
+                    'speaker':word['speaker']
+                }
 
             if speaker['speaker'] != word['speaker']:
                 phrases.append({**speaker, 'phrase':' '.join(phrase)})
-                speaker = {'start':self.format_start_time(word['start']), 'speaker':word['speaker']}
+                speaker = {
+                    'start':self.format_start_time(word['start']), 
+                    'speaker':word['speaker']
+                }
                 phrase = [word['text']]
             
             elif speaker['speaker'] == word['speaker']:
@@ -156,19 +230,43 @@ class ReceiveTranscriptionMixin:
         transcription.save()
         return transcription
 
-    def get_notification_message(self, transcription_document=None, error=False, edit_url=None, video_id=None):
+    def get_notification_message(
+        self, 
+        transcription_document=None, 
+        error=False, 
+        edit_url=None, 
+        video_id=None
+    ):
         """
         This method is used to create notification popup displayed for user
         when transcription is done
         """
         message = format_html(f"""
             <div class="notification-header {'error' if error else ''}">
-                <p class="notification-header-text"><i class="bi bi-square-fill"></i><b style="margin: auto 0;">{'Error During Transcription Process' if error else 'New Transcription'}</b><p>
-                <p class="notification-close" data-action_url={reverse("wagtail_transcription:delete_notification")}><i class="bi bi-x"></i></p>
+                <p class="notification-header-text">
+                    <i class="bi bi-square-fill"></i>
+                    <b style="margin: auto 0;">
+                        {
+                        'Error During Transcription Process' if error
+                        else 'New Transcription'
+                        }
+                    </b>
+                <p>
+                <p class="notification-close" 
+                data-action_url={reverse("wagtail_transcription:delete_notification")}>
+                    <i class="bi bi-x"></i>
+                </p>
             </div>
             <div class="notification-message {'error' if error else ''}">
                 <a target="_blank" href="{edit_url}">Check Page</a>
-                <a target="_blank" href="{f'https://www.youtube.com/watch?v={video_id}' if error else transcription_document.url}">{'Check video' if error else 'Download Transcription File <i class="bi bi-download"></i>'}</a>
+                <a target="_blank" 
+                href="{f'https://www.youtube.com/watch?v={video_id}' 
+                if error else transcription_document.url}">
+                    {
+                    'Check video' if error 
+                    else 'Download Transcription File <i class="bi bi-download"></i>'
+                    }
+                </a>
             </div>
         """)
         return message
