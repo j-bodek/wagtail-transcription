@@ -13,6 +13,8 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from ..models import Transcription
 from wagtail_transcription.utils.validation_errors import TranscriptionValidationErrors
+import os
+from django.conf import settings
 
 TRANSCRIPTION_VALIDATION_ERRORS = TranscriptionValidationErrors()
 
@@ -213,7 +215,7 @@ class ReceiveTranscriptionMixin:
                 <a target="_blank" href="{edit_url}">Check Page</a>
                 <a target="_blank" 
                 href="{f'https://www.youtube.com/watch?v={video_id}' 
-                if error else transcription_document.url}">
+                if error else os.path.join(settings.MEDIA_ROOT, transcription_document.file.url)}">
                     {
                     'Check video' if error 
                     else 'Download Transcription File <i class="bi bi-download"></i>'
