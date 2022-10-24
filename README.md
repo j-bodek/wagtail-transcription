@@ -3,11 +3,20 @@
 
 ![transcription_gif](images/transcription_gif.gif)
 
+#### Standard Installation
 ```
 pip install wagtail-transcription
 ```
 
-Then add `wagtail_transcription` and `notifications` to your installed apps:
+#### Installation For Developement
+If you want to install wagtail-transcription to develop it clone this repository to your project. After that run
+```python
+pip install -e path_to_wagtail_transcription_core_folder
+```
+This will create folder (inside your env lib directory) with json file storing path to wagtail-transcription package. Later setps are the same.
+
+
+After installation add `wagtail_transcription` and `notifications` to your installed apps:
 ***Note: Make sure that 'wagtail_transcription' is added before 'wagtail.admin'. Otherwise, administration page will not work properly***
 ```
 INSTALLED_APPS = [
@@ -47,18 +56,24 @@ In your settigns file add '**ASSEMBLY_API_TOKEN**' ([to get it create Assembly A
 ASSEMBLY_API_TOKEN = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 ```
 
+##### 4. Add YouTube Data API token
+In your settings file add **YOUTUBE_DATA_API_KEY**. To create one check [official documentation](https://developers.google.com/youtube/v3/getting-started "official documentation").
 
-##### 4. Forward your localhost (developement)
+```
+YOUTUBE_DATA_API_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+```
+
+##### 5. Forward your localhost (developement)
 <b style="color:red;">IMPORTANT</b>
 After transcription process ends [AssemblyAi](https://www.assemblyai.com/ "AssemblyAi") will send request to one of wagtail-transcription views. To receive it on local server you have to forward your localhost. Best and easiest option is use tunelling service like [localltunnel](https://theboroer.github.io/localtunnel-www/ "localltunnel").
 
-##### 5. Add BASE_URL 
+##### 6. Add BASE_URL 
 In your settings file add '**BASE_URL = "base_url"**' this is used when sending webhook_url for [AssemblyAi](https://www.assemblyai.com/ "AssemblyAi"). In developement you should set it to forward url. If you use [localltunnel](https://theboroer.github.io/localtunnel-www/ "localltunnel") it will be something like this **'https://your_subdomain.loca.lt'**
 ```
 BASE_URL = "base_url"
 ```
 
-##### 6. Add DOCUMENTS_GROUP (Optional) 
+##### 7. Add DOCUMENTS_GROUP (Optional) 
 In your settings file add '**DOCUMENTS_GROUP = True**'  to create menu group from wagtail documents and transcription
 ```
 DOCUMENTS_GROUP = True
