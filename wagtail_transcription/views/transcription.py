@@ -18,27 +18,35 @@ import re
 from ..wagtail_hooks import TranscriptionAdmin
 from django.shortcuts import get_object_or_404
 
+
 class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
     """
     Validate video_id, model_instance_str, check if transcription for same video is running
     If data valid return modal with video title, link, thumbnail, channel name and button to continue
     If data invalid return modal with appropriate error message
     """
+
     def post(self, request, *args, **kwargs):
         data = request.POST
         is_data_valid, response_message, _ = self.data_validation(data)
-        response_message = self.format_response_message(data, is_data_valid, response_message)
+        response_message = self.format_response_message(
+            data, is_data_valid, response_message
+        )
         return JsonResponse(response_message)
 
     def format_response_message(self, data, is_data_valid, response_message):
         if not is_data_valid:
-            message = format_html(f"""
+            message = format_html(
+                f"""
                 <h3 style="color: #842e3c; margin:0"><b>{response_message.get("message")}</b></h3>
-            """)
-            response_message['message'] = message
+            """
+            )
+            response_message["message"] = message
         else:
-            audio_url, audio_duration = self.yt_audio_and_duration(data.get('video_id'))
-            video_title, video_thumbnail, channel_name = self.get_youtube_video_data(data.get('video_id'))
+            audio_url, audio_duration = self.yt_audio_and_duration(data.get("video_id"))
+            video_title, video_thumbnail, channel_name = self.get_youtube_video_data(
+                data.get("video_id")
+            )
             # generate video info popup content
             TRANSCRIPTION_VIDEO_INFO_POPUP = f"""
                 <h3 style="color: #0c622e; font-weight:bold">
@@ -73,7 +81,7 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
                 </div>
             """
             message = format_html(TRANSCRIPTION_VIDEO_INFO_POPUP)
-            response_message['message'] = message
+            response_message["message"] = message
 
         return response_message
 
@@ -81,22 +89,37 @@ class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
         """
         Format seconds to user friendly format
         """
-        hours, seconds = f"{int(seconds//3600)} hour{'s' if seconds//3600 > 1 else ''} " if seconds//3600 > 0 else '', seconds - ((seconds//3600 )* 3600)
-        minutes, seconds = f"{int(seconds//60)} minute{'s' if seconds//60 > 1 else ''} " if seconds//60 > 0 else '', seconds - ((seconds//60 )* 60)
+        hours, seconds = (
+            f"{int(seconds//3600)} hour{'s' if seconds//3600 > 1 else ''} "
+            if seconds // 3600 > 0
+            else "",
+            seconds - ((seconds // 3600) * 3600),
+        )
+        minutes, seconds = (
+            f"{int(seconds//60)} minute{'s' if seconds//60 > 1 else ''} "
+            if seconds // 60 > 0
+            else "",
+            seconds - ((seconds // 60) * 60),
+        )
         seconds = f"{int(seconds)} second{'s' if seconds > 1 else ''}"
         return f"{hours} {minutes} {seconds}"
-        
+
     def yt_audio_and_duration(self, video_id):
-        yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
+        yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
         audio_url = yt.streams.all()[0].url  # Get the URL of the video stream
         return audio_url, yt.length
 
     def get_youtube_video_data(self, video_id):
         # get title, thumbnail, author
-        url = f'https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={settings.YOUTUBE_DATA_API_KEY}'
+        url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={settings.YOUTUBE_DATA_API_KEY}"
         r = requests.get(url)
-        snippet = r.json()['items'][0]['snippet']
-        return snippet['title'], snippet['thumbnails']['default']['url'], snippet['channelTitle']
+        snippet = r.json()["items"][0]["snippet"]
+        return (
+            snippet["title"],
+            snippet["thumbnails"]["default"]["url"],
+            snippet["channelTitle"],
+        )
+
 
 class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
@@ -104,39 +127,37 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
     def post(self, request, *args, **kwargs):
         data = request.POST
-        video_id = data.get('video_id')
+        video_id = data.get("video_id")
 
         # validate data
         is_data_valid, response_message, _ = self.data_validation(data)
         if is_data_valid:
             # encode model_instance_str, transcription_field, field_name to base 64
             model_instance_str_b64 = urlsafe_base64_encode(
-                force_bytes(data.get('model_instance_str'))
+                force_bytes(data.get("model_instance_str"))
             )
             transcription_field_b64 = urlsafe_base64_encode(
-                force_bytes(data.get('transcription_field'))
+                force_bytes(data.get("transcription_field"))
             )
-            field_name_b64 = urlsafe_base64_encode(
-                force_bytes(data.get('field_name'))
-            )
-            edit_url_b64 = urlsafe_base64_encode(
-                force_bytes(data.get('edit_url'))
-            )
+            field_name_b64 = urlsafe_base64_encode(force_bytes(data.get("field_name")))
+            edit_url_b64 = urlsafe_base64_encode(force_bytes(data.get("edit_url")))
 
             webhook_url = settings.BASE_URL + reverse(
-                'wagtail_transcription:receive_transcription', 
+                "wagtail_transcription:receive_transcription",
                 kwargs={
-                    'm':model_instance_str_b64, 
-                    't':transcription_field_b64, 
-                    'f':field_name_b64, 
-                    'e':edit_url_b64, 
-                    'v':video_id, 
-                    'u': request.user.id
-                }
+                    "m": model_instance_str_b64,
+                    "t": transcription_field_b64,
+                    "f": field_name_b64,
+                    "e": edit_url_b64,
+                    "v": video_id,
+                    "u": request.user.id,
+                },
             )
-                
-            response = self.request_audio_transcription(data.get("audio_url"), webhook_url)
-            if response.get('id') is not None:
+
+            response = self.request_audio_transcription(
+                data.get("audio_url"), webhook_url
+            )
+            if response.get("id") is not None:
                 # create transcription with completed=False
                 Transcription.objects.create(
                     title=f"auto_transcription-{video_id}",
@@ -144,7 +165,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
                 )
 
         return JsonResponse(response_message)
- 
+
     def request_audio_transcription(self, audio_url, webhook_url):
         """
         Send transcription request to assemblyai
@@ -153,6 +174,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
         json = {
             "audio_url": audio_url,
             "webhook_url": webhook_url,
+            "speaker_labels": True,
         }
         headers = {
             "authorization": self.api_token,
@@ -163,7 +185,10 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
         response = r.json()
         return response
 
-@method_decorator(csrf_exempt, name='dispatch') #this allows to receive post request without csrf protection
+
+@method_decorator(
+    csrf_exempt, name="dispatch"
+)  # this allows to receive post request without csrf protection
 class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
     """
     This view is used to receive transcription response from assemblyai
@@ -174,73 +199,73 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
 
     def post(self, request, m, f, t, e, v, u, *args, **kwargs):
         # decode url parameters
-        model_instance_str = force_str(urlsafe_base64_decode(m)) # get model-instance-str
-        transcription_field = force_str(urlsafe_base64_decode(t)) # get transcription-field
-        field_name = force_str(urlsafe_base64_decode(f)) # get field-name
+        model_instance_str = force_str(
+            urlsafe_base64_decode(m)
+        )  # get model-instance-str
+        transcription_field = force_str(
+            urlsafe_base64_decode(t)
+        )  # get transcription-field
+        field_name = force_str(urlsafe_base64_decode(f))  # get field-name
         edit_url = force_str(urlsafe_base64_decode(e))
-        video_id = v # get youtube video id
-        user_id = int(u) # get user id
+        video_id = v  # get youtube video id
+        user_id = int(u)  # get user id
 
         try:
-            request_body = json.loads(request.body.decode('utf-8'))
-            status = request_body.get('status')
-            transcript_id = request_body.get('transcript_id')
+            request_body = json.loads(request.body.decode("utf-8"))
+            status = request_body.get("status")
+            transcript_id = request_body.get("transcript_id")
         except Exception as e:
             print(e)
             status, transcript_id = None, None
 
         try:
-            if status == 'completed' and transcript_id:
+            if status == "completed" and transcript_id:
                 transcription_response = self.get_transcription(transcript_id)
                 # process transcription
                 transcription_document = self.process_transcription_response(
                     transcription_response=transcription_response,
-                    video_id=video_id, 
-                    model_instance_str=model_instance_str, 
-                    field_name=field_name, 
-                    transcription_field=transcription_field
+                    video_id=video_id,
+                    model_instance_str=model_instance_str,
+                    field_name=field_name,
+                    transcription_field=transcription_field,
                 )
                 notification_message = self.get_notification_message(
-                    transcription_document=transcription_document, 
-                    edit_url=edit_url, 
-                    video_id=video_id
+                    transcription_document=transcription_document,
+                    edit_url=edit_url,
+                    video_id=video_id,
                 )
             else:
                 # If error delete uncompleted Transcription
                 Transcription.objects.filter(video_id=video_id).delete()
                 notification_message = self.get_notification_message(
-                    error=True, 
-                    edit_url=edit_url, 
-                    video_id=video_id
+                    error=True, edit_url=edit_url, video_id=video_id
                 )
-                return JsonResponse({"type":"error"})
+                return JsonResponse({"type": "error"})
         except Exception as e:
             print(e)
             # If error delete uncompleted Transcription
             Transcription.objects.filter(video_id=video_id).delete()
             notification_message = self.get_notification_message(
-                error=True, 
-                edit_url=edit_url, 
-                video_id=video_id
+                error=True, edit_url=edit_url, video_id=video_id
             )
-            return JsonResponse({"type":"error"})
+            return JsonResponse({"type": "error"})
 
         # send notification
         notify.send(
-            sender=self.get_user(user_id), 
-            recipient=self.get_user(user_id), 
-            verb="Message", 
-            description=notification_message
+            sender=self.get_user(user_id),
+            recipient=self.get_user(user_id),
+            verb="Message",
+            description=notification_message,
         )
-        return JsonResponse({"type":"success"})
+        return JsonResponse({"type": "success"})
 
     def process_transcription_response(
         self,
-        transcription_response, 
-        video_id, 
-        model_instance_str, 
-        field_name, 
-        transcription_field
+        transcription_response,
+        video_id,
+        model_instance_str,
+        field_name,
+        transcription_field,
     ):
         """
         transcription_response - AssemblyAi response with transcription data https://www.assemblyai.com/docs/walkthroughs#getting-the-transcription-result
@@ -260,7 +285,7 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
         model_instance.save()
 
         return transcription_document
-    
+
 
 class GetProcessingTranscriptionsView(View):
     """
@@ -268,32 +293,42 @@ class GetProcessingTranscriptionsView(View):
     """
 
     def get(self, request, *args, **kwargs):
-        transcriptions_video_ids = list(Transcription.objects.filter(
-            completed=False
-        ).values_list('video_id', flat=True))
+        transcriptions_video_ids = list(
+            Transcription.objects.filter(completed=False).values_list(
+                "video_id", flat=True
+            )
+        )
 
-        transcriptions_video_ids = {video_id:True for video_id in transcriptions_video_ids}
+        transcriptions_video_ids = {
+            video_id: True for video_id in transcriptions_video_ids
+        }
         return JsonResponse(transcriptions_video_ids)
+
 
 class GetTranscriptionData(View):
     """
-    Return transcription id, title and edit url 
+    Return transcription id, title and edit url
     based od video_id
     """
-    
+
     def get(self, request, *args, **kwargs):
-        video_id = request.GET.get('video_id')
-        yt_id_regex = re.compile(r'^[a-zA-Z0-9_-]{11}$')
+        video_id = request.GET.get("video_id")
+        yt_id_regex = re.compile(r"^[a-zA-Z0-9_-]{11}$")
         if not yt_id_regex.match(str(video_id)):
             transcription = None
         else:
             transcription = get_object_or_404(Transcription, video_id=video_id)
-    
-        return JsonResponse({
-            "new_transcription_id": None if not transcription else transcription.id,
-            "new_transcription_title": None if not transcription else transcription.title,
-            "new_transcription_edit_url": None if not transcription else 
-            TranscriptionAdmin().url_helper.get_action_url(
-                "edit", transcription.id
-            ),
-        })
+
+        return JsonResponse(
+            {
+                "new_transcription_id": None if not transcription else transcription.id,
+                "new_transcription_title": None
+                if not transcription
+                else transcription.title,
+                "new_transcription_edit_url": None
+                if not transcription
+                else TranscriptionAdmin().url_helper.get_action_url(
+                    "edit", transcription.id
+                ),
+            }
+        )
