@@ -15,6 +15,7 @@ from ..models import Transcription
 from wagtail_transcription.utils.validation_errors import TranscriptionValidationErrors
 import os
 from django.conf import settings
+from pytube import YouTube
 
 TRANSCRIPTION_VALIDATION_ERRORS = TranscriptionValidationErrors()
 
@@ -84,6 +85,13 @@ class TranscriptionDataValidationMixin:
                 )
         except urllib.error.HTTPError:
             return TRANSCRIPTION_VALIDATION_ERRORS.NOT_EXISTING_VIDEO(
+                model_instance=model_instance, video_id=data.get("video_id")
+            )
+
+        # check if can find autho url for specified video
+        yt = YouTube(f'https://www.youtube.com/watch?v={data.get("video_id")}')
+        if not yt.streams.all():
+            return TRANSCRIPTION_VALIDATION_ERRORS.UNABLE_TO_FIND_AUDIO(
                 model_instance=model_instance, video_id=data.get("video_id")
             )
 

@@ -1,8 +1,7 @@
-
 from django.utils.html import format_html
 
-class TranscriptionValidationErrors:
 
+class TranscriptionValidationErrors:
     def GENERAL_ERROR_MESSAGE(self, model_instance=None):
         msg = """Something went wrong. 
             Please try again or upload transcription manually"""
@@ -22,7 +21,7 @@ class TranscriptionValidationErrors:
 
     def EXISTING_SAME_VIDEO_TRANSCRIPTION(self, model_instance=None, **kwargs):
         msg = format_html(
-                f"""Transcription for video with id : 
+            f"""Transcription for video with id : 
                 "{kwargs.get("video_id")}" already exists. 
                 <span class="continue_btn" style="color:#007d7f; 
                 text-decoration:underline; cursor:pointer">
@@ -41,13 +40,18 @@ class TranscriptionValidationErrors:
                 does not exist"""
         return self.get_full_msg(msg, model_instance)
 
+    def UNABLE_TO_FIND_AUDIO(self, model_instance=None, **kwargs):
+        msg = f"""Unable to find audio for video with id : {kwargs.get("video_id")}.
+                Make sure that video is public"""
+        return self.get_full_msg(msg, model_instance)
+
     def get_full_msg(self, msg, model_instance=None):
         return (
-            False, 
+            False,
             {
-                "class":"error", 
-                "type": "error", 
-                "message":msg,
+                "class": "error",
+                "type": "error",
+                "message": msg,
             },
-            model_instance
+            model_instance,
         )

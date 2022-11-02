@@ -31,13 +31,20 @@ class TranscriptionAdmin(ModelAdmin):
     def video(self, obj):
         url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={obj.video_id}&key={settings.YOUTUBE_DATA_API_KEY}"
         r = requests.get(url)
-        snippet = r.json()["items"][0]["snippet"]
+        try:
+            snippet = r.json()["items"][0]["snippet"]
+            snippet = f"""
+            <img src='{snippet["thumbnails"]["default"]["url"]}' width="60"/>
+            <p style="font-size:10px; margin-left: .5rem">{snippet["title"]}</p>
+            """
+        except IndexError:
+            snippet = "Video Url"
+
         return format_html(
             f"""
             <a target="_blank" style="display:flex; max-width:200px"
             href="https://www.youtube.com/watch?v={obj.video_id}">
-                <img src='{snippet["thumbnails"]["default"]["url"]}' width="60"/>
-                <p style="font-size:10px; margin-left: .5rem">{snippet["title"]}</p>
+            {snippet}
             </a>
         """
         )
