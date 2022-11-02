@@ -165,7 +165,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
                         video_id=video_id,
                     )
                     response = self.request_audio_transcription(
-                        "https://invalid_url", webhook_url
+                        data.get("audio_url"), webhook_url
                     )
                     # if response do not have header raise error
                     if response.get("id") is None:
