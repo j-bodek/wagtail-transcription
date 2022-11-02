@@ -31,6 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 transcription_btn.innerHTML = 'Transcription in process ...'
                 transcription_btn.dataset.active = false;
                 ListenTranscriptionBtnsClicked();
+            }else if(r.type == 'error'){
+                let fetch_message = document.getElementById('fetch_message');
+                fetch_message.className = `fetch_message ${r.class}`;
+                fetch_message.querySelector('.fetch_message_content').innerHTML = r.message;
             }
         });
         fetch_message.classList.toggle('hide');

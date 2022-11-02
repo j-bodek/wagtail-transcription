@@ -17,6 +17,8 @@ from ..models import Transcription
 import re
 from ..wagtail_hooks import TranscriptionAdmin
 from django.shortcuts import get_object_or_404
+from django.db import transaction
+from wagtail_transcription.exceptions import InvalidRequest
 
 
 class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
@@ -131,6 +133,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
 
         # validate data
         is_data_valid, response_message, _ = self.data_validation(data)
+        error_msg = None
         if is_data_valid:
             # encode model_instance_str, transcription_field, field_name to base 64
             model_instance_str_b64 = urlsafe_base64_encode(
@@ -142,27 +145,41 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
             field_name_b64 = urlsafe_base64_encode(force_bytes(data.get("field_name")))
             edit_url_b64 = urlsafe_base64_encode(force_bytes(data.get("edit_url")))
 
-            webhook_url = settings.BASE_URL + reverse(
-                "wagtail_transcription:receive_transcription",
-                kwargs={
-                    "m": model_instance_str_b64,
-                    "t": transcription_field_b64,
-                    "f": field_name_b64,
-                    "e": edit_url_b64,
-                    "v": video_id,
-                    "u": request.user.id,
-                },
-            )
-
-            response = self.request_audio_transcription(
-                data.get("audio_url"), webhook_url
-            )
-            if response.get("id") is not None:
-                # create transcription with completed=False
-                Transcription.objects.create(
-                    title=f"auto_transcription-{video_id}",
-                    video_id=video_id,
+            try:
+                webhook_url = settings.BASE_URL + reverse(
+                    "wagtail_transcription:receive_transcription",
+                    kwargs={
+                        "m": model_instance_str_b64,
+                        "t": transcription_field_b64,
+                        "f": field_name_b64,
+                        "e": edit_url_b64,
+                        "v": video_id,
+                        "u": request.user.id,
+                    },
                 )
+
+                with transaction.atomic():
+                    # create transcription with completed=False
+                    Transcription.objects.create(
+                        title=f"auto_transcription-{video_id}",
+                        video_id=video_id,
+                    )
+                    response = self.request_audio_transcription(
+                        data.get("audio_url"), webhook_url
+                    )
+                    # if response do not have header raise error
+                    if response.get("id") is None:
+                        error_msg = response.get("error")
+                        raise ValueError()
+            except Exception as e:
+                print(e)
+                response_message = {
+                    "class": "error",
+                    "type": "error",
+                    "message": (
+                        error_msg or "Ops... Something went wrong. Try again later."
+                    ),
+                }
 
         return JsonResponse(response_message)
 
