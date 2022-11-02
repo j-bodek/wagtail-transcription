@@ -196,7 +196,12 @@ class ReceiveTranscriptionMixin:
         return transcription
 
     def get_notification_message(
-        self, transcription_document=None, error=False, edit_url=None, video_id=None
+        self,
+        transcription_document=None,
+        error=False,
+        edit_url=None,
+        video_id=None,
+        **kwargs,
     ):
         """
         This method is used to create notification popup displayed for user
@@ -220,6 +225,7 @@ class ReceiveTranscriptionMixin:
                 </p>
             </div>
             <div class="notification-message {'error' if error else ''}">
+                <p>{kwargs.get("extra_text", "")}</p>
                 <a target="_blank" href="{edit_url}">Check Page</a>
                 <a target="_blank" 
                 href="{f'https://www.youtube.com/watch?v={video_id}' 

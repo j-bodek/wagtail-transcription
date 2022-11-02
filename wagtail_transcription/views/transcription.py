@@ -165,7 +165,7 @@ class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
                         video_id=video_id,
                     )
                     response = self.request_audio_transcription(
-                        data.get("audio_url"), webhook_url
+                        "https://invalid_url", webhook_url
                     )
                     # if response do not have header raise error
                     if response.get("id") is None:
@@ -236,8 +236,8 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
             status, transcript_id = None, None
 
         try:
+            transcription_response = self.get_transcription(transcript_id)
             if status == "completed" and transcript_id:
-                transcription_response = self.get_transcription(transcript_id)
                 # process transcription
                 transcription_document = self.process_transcription_response(
                     transcription_response=transcription_response,
@@ -251,13 +251,18 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
                     edit_url=edit_url,
                     video_id=video_id,
                 )
+                response_type = "success"
             else:
                 # If error delete uncompleted Transcription
                 Transcription.objects.filter(video_id=video_id).delete()
                 notification_message = self.get_notification_message(
-                    error=True, edit_url=edit_url, video_id=video_id
+                    error=True,
+                    edit_url=edit_url,
+                    video_id=video_id,
+                    extra_text=transcription_response.get("error", ""),
                 )
-                return JsonResponse({"type": "error"})
+                response_type = "error"
+
         except Exception as e:
             print(e)
             # If error delete uncompleted Transcription
@@ -265,7 +270,7 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
             notification_message = self.get_notification_message(
                 error=True, edit_url=edit_url, video_id=video_id
             )
-            return JsonResponse({"type": "error"})
+            response_type = "error"
 
         # send notification
         notify.send(
@@ -274,7 +279,7 @@ class ReceiveTranscriptionView(ReceiveTranscriptionMixin, View):
             verb="Message",
             description=notification_message,
         )
-        return JsonResponse({"type": "success"})
+        return JsonResponse({"type": response_type})
 
     def process_transcription_response(
         self,
