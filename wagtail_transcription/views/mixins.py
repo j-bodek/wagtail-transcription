@@ -3,119 +3,14 @@ from docx import Document as docx_document
 import tempfile
 import io
 from django.core.files.base import File
-import re
-import urllib
 from django.apps import apps
-from PIL import ImageFile
 from django.urls import reverse
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from ..models import Transcription
-from wagtail_transcription.utils.validation_errors import TranscriptionValidationErrors
 import os
 from django.conf import settings
-from pytube import YouTube
-
-TRANSCRIPTION_VALIDATION_ERRORS = TranscriptionValidationErrors()
-
-
-class TranscriptionDataValidationMixin:
-    """
-    Used to validate transcription data
-    """
-
-    def data_validation(self, data):
-        # get app name, model name and if it exists
-        try:
-            app, model, instance_id = data.get("model_instance_str").split(":")
-            model = apps.get_model(app, model)
-        except (AttributeError, ValueError, LookupError) as e:
-            print(e)
-            # If there is error independent from user display easy error message
-            return TRANSCRIPTION_VALIDATION_ERRORS.GENERAL_ERROR_MESSAGE()
-
-        # check if model_instance has transcription_field field
-        try:
-            model_instance = model.objects.get(id=str(instance_id))
-            getattr(model_instance, data.get("transcription_field"))
-        except (AttributeError, ValueError, LookupError) as e:
-            print(e)
-            # If there is error independent from user display easy error message
-            return TRANSCRIPTION_VALIDATION_ERRORS.NO_INSTANCE(
-                model_name=model.__name__
-            )
-
-        # check if video id is valid
-        yt_id_regex = re.compile(r"^[a-zA-Z0-9_-]{11}$")
-        if not yt_id_regex.match(str(data.get("video_id"))):
-            return TRANSCRIPTION_VALIDATION_ERRORS.INVALID_VIDEO_ID(
-                model_instance=model_instance
-            )
-
-        # check if transcription for video with same id exists
-        same_video_transcriptions = Transcription.objects.filter(
-            video_id=data.get("video_id")
-        )
-        if same_video_transcriptions.filter(completed=True).exists():
-            return TRANSCRIPTION_VALIDATION_ERRORS.EXISTING_SAME_VIDEO_TRANSCRIPTION(
-                model_instance=model_instance, video_id=data.get("video_id")
-            )
-
-        # # check if transcription process for video with same id is running
-        if (
-            Transcription.objects.filter(video_id=data.get("video_id"))
-            .filter(completed=False)
-            .exists()
-        ):
-            return TRANSCRIPTION_VALIDATION_ERRORS.TRANSCRIPTION_IS_RUNNING(
-                model_instance=model_instance, video_id=data.get("video_id")
-            )
-        # check if video with video_id exists
-        try:
-            yt_thumbnail_url = (
-                f"http://img.youtube.com/vi/{data.get('video_id')}/mqdefault.jpg"
-            )
-            width, _ = self.get_online_img_size(yt_thumbnail_url)
-            # HACK a mq thumbnail has width of 320.
-            # if the video does not exist(therefore thumbnail don't exist), a default thumbnail of 120 width is returned.
-            if width == 120:
-                return TRANSCRIPTION_VALIDATION_ERRORS.NOT_EXISTING_VIDEO(
-                    model_instance=model_instance, video_id=data.get("video_id")
-                )
-        except urllib.error.HTTPError:
-            return TRANSCRIPTION_VALIDATION_ERRORS.NOT_EXISTING_VIDEO(
-                model_instance=model_instance, video_id=data.get("video_id")
-            )
-
-        # check if can find autho url for specified video
-        yt = YouTube(f'https://www.youtube.com/watch?v={data.get("video_id")}')
-        if not yt.streams.all():
-            return TRANSCRIPTION_VALIDATION_ERRORS.UNABLE_TO_FIND_AUDIO(
-                model_instance=model_instance, video_id=data.get("video_id")
-            )
-
-        return True, {"class": "success", "type": "success"}, model_instance
-
-    def get_online_img_size(self, uri):
-        """
-        Get image size by it's url (None if not known), return width, height
-        """
-        file = urllib.request.urlopen(uri)
-        size = file.headers.get("content-length")
-        if size:
-            size = int(size)
-        p = ImageFile.Parser()
-        while 1:
-            data = file.read(1024)
-            if not data:
-                break
-            p.feed(data)
-            if p.image:
-                return p.image.size
-                break
-        file.close()
-        return None
 
 
 class ReceiveTranscriptionMixin:
