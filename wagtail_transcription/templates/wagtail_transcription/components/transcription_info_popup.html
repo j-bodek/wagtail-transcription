@@ -1,0 +1,35 @@
+{% load wagtailcore_tags %}
+
+<h3 style="color: #0c622e; font-weight:bold">
+    Transcription process will take about 
+    {{ audio_duration }}
+</h3>
+<!-- Display video thumbnail, title, link -->
+<a href="https://www.youtube.com/watch?v={{ video_id }}" target="_blank">
+    <div style="display: flex; background: #262626">
+        <img src="{{ video_thumbnail }}" alt="{{ channel_name }}-image">
+        <div style="padding-left: .5rem; padding-top: .5rem; height: fit-content;">
+            <p style="font-size:14px; line-height:1; margin:0; color: white;">
+                {{ video_title }}
+            </p>
+            <p style="font-size:12px; color:#a3a3a3; margin: 0; margin-top: .25rem">
+                {{ channel_name }}
+            </p>
+        </div>
+    </div>
+</a>
+<!-- Hidden data form -->
+<div style="display:flex; margin-top: 1rem; justify-content: right">
+    <form method="POST" action="{% url 'wagtail_transcription:request_transcription' %}">
+        {% csrf_token %}
+            <input type="hidden" name="video_id" value="{{ video_id }}">
+        <input type="hidden" name="audio_url" value="{{ audio_url }}">
+        <input type="hidden" name="audio_duration" value="{{ audio_duration }}">
+        
+        <input type="hidden" name="transcription_field" value="{{ transcription_field }}">
+        <input type="hidden" name="field_name" value="{{ field_name }}">
+        <input type="hidden" name="edit_url" value="{{ edit_url }}">
+        <input type="hidden" name="model_instance_str" value="{{ model_instance_str }}">
+        <button class="continue_btn button action-save" action="button">Continue</button>
+    </form>
+</div>
