@@ -2,8 +2,8 @@ from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Q
 from django.db.models.functions import Lower
-from typing import List, Type, Callable
-from django.http import HttpRequest, JsonResponse
+from typing import List, Type, Callable, Union
+from django.http import HttpRequest, JsonResponse, HttpResponse
 from functools import wraps
 
 from django.apps import apps
@@ -15,7 +15,9 @@ import pytube
 TRANSCRIPTION_VALIDATION_ERRORS = TranscriptionValidationErrors()
 
 
-def video_data_validation(view_func: Type[Callable]) -> Type[JsonResponse]:
+def video_data_validation(
+    view_func: Type[Callable],
+) -> Type[JsonResponse]:
     """
     This decorator validate if video with specified id
     is valid. If data is valid it pass additional YouTube
@@ -23,7 +25,12 @@ def video_data_validation(view_func: Type[Callable]) -> Type[JsonResponse]:
     """
 
     @wraps(view_func)
-    def _wrap(request: Type[HttpRequest], *args, **kwargs):
+    def _wrap(
+        request: Type[HttpRequest],
+        *args,
+        **kwargs,
+    ) -> Type[JsonResponse]:
+
         data = request.POST
         # get app name and model name if it exists
         try:
@@ -66,7 +73,7 @@ def video_data_validation(view_func: Type[Callable]) -> Type[JsonResponse]:
 
         try:
             # check if can find audio url for specified video
-            if not yt.streams.all():
+            if not yt.streams:
                 return TRANSCRIPTION_VALIDATION_ERRORS.UNABLE_TO_FIND_AUDIO(
                     model_instance=model_instance, video_id=data.get("video_id")
                 )
@@ -88,11 +95,11 @@ def video_data_validation(view_func: Type[Callable]) -> Type[JsonResponse]:
 
 
 def staff_or_group_required(
-    view_func=None,
-    redirect_field_name=REDIRECT_FIELD_NAME,
+    view_func: Union[Type[Callable], None] = None,
+    redirect_field_name: str = REDIRECT_FIELD_NAME,
     login_url: str = "admin:login",
     group_names: List[int] = [],
-):
+) -> Type[HttpResponse]:
     """
     Decorator for views that checks that the user is logged in and is a staff
     member, redirecting to the login page if necessary.
