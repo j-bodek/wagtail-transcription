@@ -2,13 +2,14 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils.html import format_html
 from django.shortcuts import reverse
-from .mixins import TranscriptionDataValidationMixin, ReceiveTranscriptionMixin
+from .mixins import ReceiveTranscriptionMixin
 from pytube import YouTube
 from django.conf import settings
 import requests
 from django.middleware import csrf
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from wagtail_transcription.decorators import video_data_validation
 import json
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -18,112 +19,51 @@ import re
 from ..wagtail_hooks import TranscriptionAdmin
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.template import loader
 from wagtail_transcription.exceptions import InvalidRequest
+import time
 
 
-class ValidateTranscriptionDataView(TranscriptionDataValidationMixin, View):
+class ValidateTranscriptionDataView(View):
     """
     Validate video_id, model_instance_str, check if transcription for same video is running
     If data valid return modal with video title, link, thumbnail, channel name and button to continue
     If data invalid return modal with appropriate error message
     """
 
-    def post(self, request, *args, **kwargs):
-        data = request.POST
-        is_data_valid, response_message, _ = self.data_validation(data)
-        response_message = self.format_response_message(
-            data, is_data_valid, response_message
-        )
+    http_method_names = ["post"]
+
+    @method_decorator(video_data_validation)
+    def post(self, request, youtube_instance, *args, **kwargs):
+        self.youtube_instance = youtube_instance
+        response_message = self.get_context_data(request.POST)
         return JsonResponse(response_message)
 
-    def format_response_message(self, data, is_data_valid, response_message):
-        if not is_data_valid:
-            message = format_html(
-                f"""
-                <h3 style="color: #842e3c; margin:0"><b>{response_message.get("message")}</b></h3>
-            """
-            )
-            response_message["message"] = message
-        else:
-            audio_url, audio_duration = self.yt_audio_and_duration(data.get("video_id"))
-            video_title, video_thumbnail, channel_name = self.get_youtube_video_data(
-                data.get("video_id")
-            )
-            # generate video info popup content
-            TRANSCRIPTION_VIDEO_INFO_POPUP = f"""
-                <h3 style="color: #0c622e; font-weight:bold">
-                    Transcription process will take about 
-                    {self.format_seconds(audio_duration//1.25)}
-                </h3>
-                <a href="https://www.youtube.com/watch?v={data.get('video_id')}" target="_blank">
-                    <div style="display: flex; background: #262626">
-                        <img src="{video_thumbnail}" alt="{channel_name}-image">
-                        <div style="padding-left: .5rem; padding-top: .5rem; height: fit-content;">
-                            <p style="font-size:14px; line-height:1; margin:0; color: white;">
-                                {video_title}
-                            </p>
-                            <p style="font-size:12px; color:#a3a3a3; margin: 0; margin-top: .25rem">
-                                {channel_name}
-                            </p>
-                        </div>
-                    </div>
-                </a>
-                <div style="display:flex; margin-top: 1rem; justify-content: right">
-                    <form method="POST" action="{reverse('wagtail_transcription:request_transcription')}">
-                        <input type="hidden" name="csrfmiddlewaretoken" value="{csrf.get_token(self.request)}">
-                        <input type="hidden" name="video_id" value="{(data.get('video_id'))}">
-                        <input type="hidden" name="transcription_field" value="{(data.get('transcription_field'))}">
-                        <input type="hidden" name="field_name" value="{(data.get('field_name'))}">
-                        <input type="hidden" name="audio_url" value="{audio_url}">
-                        <input type="hidden" name="audio_duration" value="{audio_duration}">
-                        <input type="hidden" name="edit_url" value="{(data.get('edit_url'))}">
-                        <input type="hidden" name="model_instance_str" value="{(data.get('model_instance_str'))}">
-                        <button class="continue_btn button action-save" action="button">Continue</button>
-                    </form>
-                </div>
-            """
-            message = format_html(TRANSCRIPTION_VIDEO_INFO_POPUP)
-            response_message["message"] = message
-
-        return response_message
-
-    def format_seconds(self, seconds):
-        """
-        Format seconds to user friendly format
-        """
-        hours, seconds = (
-            f"{int(seconds//3600)} hour{'s' if seconds//3600 > 1 else ''} "
-            if seconds // 3600 > 0
-            else "",
-            seconds - ((seconds // 3600) * 3600),
-        )
-        minutes, seconds = (
-            f"{int(seconds//60)} minute{'s' if seconds//60 > 1 else ''} "
-            if seconds // 60 > 0
-            else "",
-            seconds - ((seconds // 60) * 60),
-        )
-        seconds = f"{int(seconds)} second{'s' if seconds > 1 else ''}"
-        return f"{hours} {minutes} {seconds}"
-
-    def yt_audio_and_duration(self, video_id):
-        yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-        audio_url = yt.streams.all()[0].url  # Get the URL of the video stream
-        return audio_url, yt.length
-
-    def get_youtube_video_data(self, video_id):
-        # get title, thumbnail, author
-        url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={settings.YOUTUBE_DATA_API_KEY}"
+    def get_context_data(self, data):
+        # get video data (title, thumbnail, channel etc)
+        url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={data.get('video_id')}&key={settings.YOUTUBE_DATA_API_KEY}"
         r = requests.get(url)
         snippet = r.json()["items"][0]["snippet"]
-        return (
-            snippet["title"],
-            snippet["thumbnails"]["default"]["url"],
-            snippet["channelTitle"],
+
+        # generate video info popup content
+        message = loader.render_to_string(
+            "wagtail_transcription/components/transcription_info_popup.html",
+            context={
+                "audio_duration": time.strftime(
+                    "%H:%M:%S", time.gmtime(self.youtube_instance.length // 1.25)
+                ),
+                "video_title": snippet["title"],
+                "video_thumbnail": snippet["thumbnails"]["default"]["url"],
+                "channel_name": snippet["channelTitle"],
+                "audio_url": self.youtube_instance.streams.all()[0].url,
+                **data,
+            },
         )
 
+        return {"class": "success", "type": "success", "message": message}
 
-class RequestTranscriptionView(TranscriptionDataValidationMixin, View):
+
+class RequestTranscriptionView(View):
 
     api_token = settings.ASSEMBLY_API_TOKEN
 
