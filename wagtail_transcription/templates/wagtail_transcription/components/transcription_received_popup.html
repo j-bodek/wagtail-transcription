@@ -1,0 +1,35 @@
+{% load wagtailcore_tags %}
+
+<div class="notification-header {% if error %}error{% endif %}">
+    <p class="notification-header-text">
+        <i class="bi bi-square-fill"></i>
+        <b style="margin: auto 0;">
+            {% if error %}
+                Error During Transcription Process
+            {% else %}
+                New Transcription
+            {% endif %}
+        </b>
+    <p>
+    <p class="notification-close" 
+    data-action_url="{% url 'wagtail_transcription:delete_notification' %}">
+        <i class="bi bi-x"></i>
+    </p>
+</div>
+<div class="notification-message {% if error %}error{% endif %}">
+    <p>{{extra_text}}</p>
+    <a target="_blank" 
+    href="
+    {% if error %}
+        https://www.youtube.com/watch?v={{video_id}}
+    {% else %}
+        {{transcription.file.url}}
+    {% endif %}    
+    ">
+        {% if error %}
+            Check video
+        {% else %}
+            Download Transcription File <i class="bi bi-download"></i>
+        {% endif %}    
+    </a>
+</div>

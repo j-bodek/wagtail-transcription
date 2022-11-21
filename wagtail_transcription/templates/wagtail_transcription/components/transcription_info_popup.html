@@ -20,16 +20,16 @@
 </a>
 <!-- Hidden data form -->
 <div style="display:flex; margin-top: 1rem; justify-content: right">
-    <form method="POST" action="{% url 'wagtail_transcription:request_transcription' %}">
+    <form method="POST" 
+    action="{% url 'wagtail_transcription:request_transcription' token=token %}">
         {% csrf_token %}
-            <input type="hidden" name="video_id" value="{{ video_id }}">
+        <input type="hidden" name="video_id" value="{{ video_id }}">
         <input type="hidden" name="audio_url" value="{{ audio_url }}">
         <input type="hidden" name="audio_duration" value="{{ audio_duration }}">
         
+        <input type="hidden" name="parent_instance_str" value="{{ parent_instance_str }}">
         <input type="hidden" name="transcription_field" value="{{ transcription_field }}">
         <input type="hidden" name="field_name" value="{{ field_name }}">
-        <input type="hidden" name="edit_url" value="{{ edit_url }}">
-        <input type="hidden" name="model_instance_str" value="{{ model_instance_str }}">
         <button class="continue_btn button action-save" action="button">Continue</button>
     </form>
 </div>
