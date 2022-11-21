@@ -4,10 +4,12 @@ from django.db import models
 
 register = template.Library()
 
+
 @register.filter
 def get_app_model_id(instance):
     """
-    This tag takes django model instance and return string : "app:model_name:instance_id"
+    This tag takes django model instance and
+    return string : "app:model_name:instance_id"
     """
     model = type(instance)
     if issubclass(model, models.Model):

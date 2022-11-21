@@ -34,17 +34,17 @@ def video_data_validation(
         data = request.POST
         # get app name and model name if it exists
         try:
-            app, model, instance_id = data.get("model_instance_str").split(":")
+            app, model, instance_id = data.get("parent_instance_str").split(":")
             model = apps.get_model(app, model)
         except (AttributeError, ValueError, LookupError) as e:
             logging.exception("message")
             # If there is error independent from user display easy error message
             return TRANSCRIPTION_VALIDATION_ERRORS.GENERAL_ERROR_MESSAGE()
 
-        # check if model_instance has 'transcription_field' field
+        # check if parent_instance has 'transcription_field' field
         try:
-            model_instance = model.objects.get(id=str(instance_id))
-            getattr(model_instance, data.get("transcription_field"))
+            parent_instance = model.objects.get(id=str(instance_id))
+            getattr(parent_instance, data.get("transcription_field"))
         except (AttributeError, ValueError, LookupError) as e:
             logging.exception("message")
             # If there is error independent from user display easy error message
@@ -56,7 +56,7 @@ def video_data_validation(
         # or is currently running
         if Transcription.objects.filter(video_id=data.get("video_id")).exists():
             return TRANSCRIPTION_VALIDATION_ERRORS.SAME_VIDEO_TRANSCRIPTION(
-                model_instance=model_instance, video_id=data.get("video_id")
+                model_instance=parent_instance, video_id=data.get("video_id")
             )
 
         # try to get YouTube instance
@@ -67,7 +67,7 @@ def video_data_validation(
         except (pytube.exceptions.RegexMatchError):
             logging.exception("message")
             data = TRANSCRIPTION_VALIDATION_ERRORS.INVALID_VIDEO_ID(
-                model_instance=model_instance
+                model_instance=parent_instance
             )
             return JsonResponse(data)
 
@@ -75,7 +75,7 @@ def video_data_validation(
             # check if can find audio url for specified video
             if not yt.streams:
                 return TRANSCRIPTION_VALIDATION_ERRORS.UNABLE_TO_FIND_AUDIO(
-                    model_instance=model_instance, video_id=data.get("video_id")
+                    model_instance=parent_instance, video_id=data.get("video_id")
                 )
         except (
             pytube.exceptions.VideoUnavailable,

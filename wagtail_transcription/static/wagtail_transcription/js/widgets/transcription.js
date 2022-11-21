@@ -44,11 +44,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // create data that will be send
         const CreateData = new FormData();
         CreateData.append("video_id", video_id);
-        CreateData.append("model_instance_str", transcription_btn.dataset.model_instance_str);
+        CreateData.append("parent_instance_str", transcription_btn.dataset.parent_instance_str);
         CreateData.append("transcription_field", transcription_btn.dataset.transcription_field);
         CreateData.append("transcription_field_id", transcription_btn.dataset.transcription_field_id);
         CreateData.append("field_name", transcription_btn.dataset.field_name);
-        CreateData.append("edit_url", window.location.href);
         CreateData.append("csrfmiddlewaretoken", getCookie('csrftoken'));
 
         // set ajax_send to true in order to provide sending another request
