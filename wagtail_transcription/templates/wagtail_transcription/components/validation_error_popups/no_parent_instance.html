@@ -1,0 +1,6 @@
+{% extends 'wagtail_transcription/components/validation_error_popups/base.html' %}
+
+{% block msg %}
+        Please create {{model_name}} object first. 
+        Transcription field doesn't work when creating new instance.
+{% endblock %}

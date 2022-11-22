@@ -1,5 +1,6 @@
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.decorators import user_passes_test
+from django.template import loader
 from django.db.models import Q
 from django.db.models.functions import Lower
 from typing import List, Type, Callable, Union
@@ -8,11 +9,32 @@ from functools import wraps
 
 from django.apps import apps
 from .models import Transcription
-from wagtail_transcription.utils.validation_errors import TranscriptionValidationErrors
 import logging
 import pytube
 
-TRANSCRIPTION_VALIDATION_ERRORS = TranscriptionValidationErrors()
+
+def get_error_response(
+    request: Type[HttpRequest],
+    template: str,
+    **context,
+) -> Type[JsonResponse]:
+    """
+    Helper function that return json response with
+    invalid data response
+    """
+
+    message = loader.render_to_string(
+        f"wagtail_transcription/components/validation_error_popups/{template}",
+        context=context,
+        request=request,
+    )
+    return JsonResponse(
+        {
+            "class": "error",
+            "type": "error",
+            "message": message,
+        }
+    )
 
 
 def video_data_validation(
@@ -39,7 +61,12 @@ def video_data_validation(
         except (AttributeError, ValueError, LookupError) as e:
             logging.exception("message")
             # If there is error independent from user display easy error message
-            return TRANSCRIPTION_VALIDATION_ERRORS.GENERAL_ERROR_MESSAGE()
+            return get_error_response(
+                request,
+                "base.html",
+                msg="""Something went wrong. 
+                Please try again or upload transcription manually""",
+            )
 
         # check if parent_instance has 'transcription_field' field
         try:
@@ -48,15 +75,19 @@ def video_data_validation(
         except (AttributeError, ValueError, LookupError) as e:
             logging.exception("message")
             # If there is error independent from user display easy error message
-            return TRANSCRIPTION_VALIDATION_ERRORS.NO_INSTANCE(
-                model_name=model.__name__
+            return get_error_response(
+                request,
+                "no_parent_instance.html",
+                model_name=model.__name__,
             )
 
         # check if transcription for video with same id exists
         # or is currently running
         if Transcription.objects.filter(video_id=data.get("video_id")).exists():
-            return TRANSCRIPTION_VALIDATION_ERRORS.SAME_VIDEO_TRANSCRIPTION(
-                model_instance=parent_instance, video_id=data.get("video_id")
+            return get_error_response(
+                request,
+                "same_video_transcription.html",
+                video_id=data.get("video_id"),
             )
 
         # try to get YouTube instance
@@ -66,17 +97,12 @@ def video_data_validation(
             )
         except (pytube.exceptions.RegexMatchError):
             logging.exception("message")
-            data = TRANSCRIPTION_VALIDATION_ERRORS.INVALID_VIDEO_ID(
-                model_instance=parent_instance
-            )
-            return JsonResponse(data)
+            return get_error_response(request, "invalid_video_id.html")
 
         try:
             # check if can find audio url for specified video
             if not yt.streams:
-                return TRANSCRIPTION_VALIDATION_ERRORS.UNABLE_TO_FIND_AUDIO(
-                    model_instance=parent_instance, video_id=data.get("video_id")
-                )
+                raise pytube.exceptions.VideoUnavailable
         except (
             pytube.exceptions.VideoUnavailable,
             pytube.exceptions.LiveStreamError,
@@ -86,8 +112,7 @@ def video_data_validation(
             pytube.exceptions.VideoPrivate,
         ) as e:
             logging.exception("message")
-            data = TRANSCRIPTION_VALIDATION_ERRORS.get_full_msg(msg=str(e))
-            return JsonResponse(data)
+            return get_error_response(request, "base.html", msg=str(e))
 
         return view_func(request, yt, *args, **kwargs)
 

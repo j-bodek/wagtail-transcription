@@ -1,0 +1,10 @@
+{% extends 'wagtail_transcription/components/validation_error_popups/base.html' %}
+
+{% block msg %}
+    Transcription for video with id : "{kwargs.get("video_id")}" 
+    already exists or is currently running. 
+    <span class="continue_btn" style="color:#007d7f; 
+    text-decoration:underline; cursor:pointer">
+        Add Existing Transcription
+    </span>
+{% endblock %}
