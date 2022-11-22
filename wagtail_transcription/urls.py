@@ -28,8 +28,8 @@ urlpatterns = [
         ),
         name="validate_transcription_data",
     ),
-    path(
-        "request_transcription/",
+    re_path(
+        r"request_transcription/(?P<token>[0-9A-Za-z_/-]+)/",
         staff_or_group_required(
             RequestTranscriptionView.as_view(),
             group_names=["moderators", "editors"],
@@ -53,7 +53,7 @@ urlpatterns = [
         name="transcription_data",
     ),
     re_path(
-        r"^receive_transcription/(?P<m>[0-9A-Za-z_/-]+)/(?P<t>[0-9A-Za-z_/-]+)/(?P<f>[0-9A-Za-z_/-]+)/(?P<e>[0-9A-Za-z_/-]+)/(?P<v>[0-9A-Za-z_-]+)/(?P<u>[0-9]+)?$",
+        r"^receive_transcription/(?P<video_id>[0-9A-Za-z_-]+)/(?P<user_id>[0-9]+)?$",
         ReceiveTranscriptionView.as_view(),
         name="receive_transcription",
     ),

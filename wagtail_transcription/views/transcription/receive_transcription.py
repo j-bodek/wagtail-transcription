@@ -1,50 +1,32 @@
 # django
 from django.http import JsonResponse, HttpRequest
 from django.views import View
-from django.utils.html import format_html
-from django.shortcuts import reverse, get_object_or_404
 from django.conf import settings
-from django.middleware import csrf
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.db.models import Model
-from django.db import transaction
 from django.template import loader
-from django.apps import apps
 from django.core.files.base import File
 from django.contrib.auth import get_user_model
 
 # notifications
 from notifications.signals import notify
 
-# pytube
-from pytube import YouTube
-
 # wagtail transcription
 from wagtail_transcription.views.mixins import ProcessTranscriptionMixin
-from wagtail_transcription.decorators import video_data_validation
 from wagtail_transcription.models import Transcription
-from wagtail_transcription.wagtail_hooks import TranscriptionAdmin
-from wagtail_transcription.tokens import validated_video_data_token
 
 # other packages
-import requests
 import json
-import re
-import time
 from typing import Type
 import logging
 
 
-@method_decorator(
-    csrf_exempt, name="dispatch"
-)  # this allows to receive post request without csrf protection
+# this allows to receive post request without csrf protection
+@method_decorator(csrf_exempt, name="dispatch")
 class ReceiveTranscriptionView(ProcessTranscriptionMixin, View):
     """
     This view is used to receive transcription response from assemblyai
-    and based on that create transcription object or display error
+    and based on that response create transcription object or display error
     """
 
     api_token = settings.ASSEMBLY_API_TOKEN
@@ -52,9 +34,9 @@ class ReceiveTranscriptionView(ProcessTranscriptionMixin, View):
 
     def post(
         self,
-        request,
-        video_id,
-        user_id,
+        request: Type[HttpRequest],
+        video_id: str,
+        user_id: str,
         *args,
         **kwargs,
     ) -> Type[JsonResponse]:
@@ -118,15 +100,16 @@ class ReceiveTranscriptionView(ProcessTranscriptionMixin, View):
 
     def process_transcription_response(
         self,
-        transcription_response,
-        video_id,
-    ):
+        transcription_response: dict,
+        video_id: str,
+    ) -> Type[Transcription]:
         """
         -   transcription_response - AssemblyAi response with transcription data
             https://www.assemblyai.com/docs/walkthroughs#getting-the-transcription-result
 
         -   video_id - id of youtube video for which transcription was made
         """
+
         words = transcription_response.get("words")
         transcript_docx_io = self.create_transcript_docx(words)
 

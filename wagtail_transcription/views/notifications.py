@@ -1,6 +1,7 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpRequest
 from django.views import View
 from notifications.models import Notification
+from typing import Type
 
 
 class DeleteNotificationView(View):
@@ -8,7 +9,15 @@ class DeleteNotificationView(View):
     Delete Notification instance from database
     """
 
-    def post(self, request, *args, **kwargs):
+    http_method_names = ["post"]
+
+    def post(
+        self,
+        request: Type[HttpRequest],
+        *args,
+        **kwargs,
+    ) -> Type[JsonResponse]:
+
         notification_id = request.POST.get("notification_id")
         notification = Notification.objects.filter(id=notification_id)
         if notification.exists():

@@ -2,23 +2,14 @@ import requests
 from docx import Document as docx_document
 import tempfile
 import io
-from django.core.files.base import File
-from django.apps import apps
-from django.urls import reverse
-from django.utils.html import format_html
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
-from ..models import Transcription
-import os
-from django.conf import settings
 import datetime
 from typing import Type
 
 
 class ProcessTranscriptionMixin:
     """
-    Contains methods that help to clean transcripted audio data,
-    create transcription docx file and set it for Transcription object
+    Contains methods that help to clean transcripted audio data and
+    create transcription docx file
     """
 
     def get_transcription(self, transcript_id: str) -> dict:

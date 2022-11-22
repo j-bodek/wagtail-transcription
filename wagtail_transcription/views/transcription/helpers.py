@@ -41,7 +41,15 @@ class GetProcessingTranscriptionsView(View):
     Return ids of precessing transcriptions
     """
 
-    def get(self, request, *args, **kwargs):
+    http_method_names = ["get"]
+
+    def get(
+        self,
+        request: Type[HttpRequest],
+        *args,
+        **kwargs,
+    ) -> Type[JsonResponse]:
+
         transcriptions_video_ids = list(
             Transcription.objects.filter(completed=False).values_list(
                 "video_id", flat=True
@@ -60,7 +68,15 @@ class GetTranscriptionData(View):
     based od video_id
     """
 
-    def get(self, request, *args, **kwargs):
+    http_method_names = ["get"]
+
+    def get(
+        self,
+        request: Type[HttpRequest],
+        *args,
+        **kwargs,
+    ) -> Type[JsonResponse]:
+
         video_id = request.GET.get("video_id")
         yt_id_regex = re.compile(r"^[a-zA-Z0-9_-]{11}$")
         if not yt_id_regex.match(str(video_id)):
