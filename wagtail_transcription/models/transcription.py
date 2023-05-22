@@ -1,8 +1,8 @@
 from wagtail.documents.models import AbstractDocument
-from wagtail.admin.edit_handlers import FieldPanel
+from wagtail.admin.panels import FieldPanel
 from django.db import models
 from wagtail.snippets.models import register_snippet
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 import re
 
 
@@ -38,7 +38,7 @@ class Transcription(AbstractDocument):
             raise ValidationError(
                 f"""Invalid youtube video id ("{self.video_id}"). 
                 Make sure it have exactly 11 characters, 
-                contains only numbers, letters or dashes"""
+                contains only numbers, letters or dashes"""  # noqa
             )
 
     def validate_transcription_file(self) -> None:
@@ -49,7 +49,7 @@ class Transcription(AbstractDocument):
         if extension != "docx":
             raise ValidationError(
                 f"""Transcription file has {extension} extension. 
-                Only docx files are allowed"""
+                Only docx files are allowed"""  # noqa
             )
 
     def clean(self, *args, **kwargs) -> None:
