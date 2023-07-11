@@ -49,7 +49,6 @@ class RequestTranscriptionView(View):
         *args,
         **kwargs,
     ) -> Type[JsonResponse]:
-
         data = request.POST
         # check if data was validated
         if not validated_video_data_token.check_token(
@@ -124,7 +123,7 @@ class RequestTranscriptionView(View):
 
         # webhook_url will be then used by assemblyai to send
         # request about finished transcription or errors
-        webhook_url = settings.BASE_URL + reverse(
+        webhook_url = settings.BASE_URL.strip("/") + reverse(
             "wagtail_transcription:receive_transcription",
             kwargs={
                 "video_id": self.request.POST.get("video_id"),
