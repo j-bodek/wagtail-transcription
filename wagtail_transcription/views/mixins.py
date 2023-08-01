@@ -32,7 +32,7 @@ class ProcessTranscriptionMixin:
                     # if phrase is not empty dict
                     yield phrase
 
-                # redifine phrase object
+                # redefine phrase object
                 phrase = {
                     "start": str(datetime.timedelta(milliseconds=word["start"]))[:-4],
                     "speaker": word["speaker"],
@@ -48,7 +48,6 @@ class ProcessTranscriptionMixin:
             yield phrase
 
     def create_transcript_docx(self, words: list) -> Type[io.BytesIO]:
-
         document = docx_document()
         with tempfile.NamedTemporaryFile() as tmp:
             for phrase in self.phreses_generator(words):

@@ -9,7 +9,7 @@ from typing import Type
 class ValidatedVideoDataTokenGenerator(PasswordResetTokenGenerator):
     """
     This token generator allow to create token that can
-    be helpfull while determining if video data is valid or not
+    be helpful while determining if video data is valid or not
     """
 
     def make_token(

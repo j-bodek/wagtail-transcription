@@ -38,7 +38,7 @@ import logging
 
 class GetProcessingTranscriptionsView(View):
     """
-    Return ids of precessing transcriptions
+    Return ids of processing transcriptions
     """
 
     http_method_names = ["get"]
@@ -49,7 +49,6 @@ class GetProcessingTranscriptionsView(View):
         *args,
         **kwargs,
     ) -> Type[JsonResponse]:
-
         transcriptions_video_ids = list(
             Transcription.objects.filter(completed=False).values_list(
                 "video_id", flat=True
@@ -76,7 +75,6 @@ class GetTranscriptionData(View):
         *args,
         **kwargs,
     ) -> Type[JsonResponse]:
-
         video_id = request.GET.get("video_id")
         yt_id_regex = re.compile(r"^[a-zA-Z0-9_-]{11}$")
         if not yt_id_regex.match(str(video_id)):
