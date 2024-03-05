@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from wagtail import VERSION as WAGTAIL_VERSION
 from wagtail import hooks
 from wagtail.admin.menu import Menu, SubmenuMenuItem
-from wagtail.contrib.modeladmin.options import ModelAdmin, modeladmin_register
+from wagtail_modeladmin.options import ModelAdmin, modeladmin_register
 from wagtail.documents.wagtail_hooks import DocumentsMenuItem
 
 from .models import Transcription
@@ -78,7 +78,7 @@ class TranscriptionAdmin(ModelAdmin):
         if WAGTAIL_VERSION >= (4, 0):
             submenu = Menu(items=menu_items)
         else:
-            from wagtail.contrib.modeladmin.menus import SubMenu
+            from wagtail_modeladmin.menus import SubMenu
 
             submenu = SubMenu(menu_items)
         return SubmenuMenuItem(
