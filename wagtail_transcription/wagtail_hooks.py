@@ -20,9 +20,9 @@ class TranscriptionAdmin(ModelAdmin):
     """
 
     model = Transcription
-    menu_icon = "doc-full-inverse"
+    icon_name = "doc-full-inverse"
     base_url_path = "transcription"
-    menu_order = 200
+    order = 200
     list_display = (
         "title",
         "video",
@@ -84,7 +84,6 @@ class TranscriptionAdmin(ModelAdmin):
         return SubmenuMenuItem(
             "Documents",
             submenu,
-            classnames="doc-full-inverse",
             name="custom-documents",
         )
 
@@ -98,8 +97,6 @@ class TranscriptionAdmin(ModelAdmin):
                 _("Documents"),
                 reverse("wagtaildocs:index"),
                 name="documents",
-                icon_name="doc-full-inverse",
-                order=400,
             ),
             super().get_menu_item(),
         ]
