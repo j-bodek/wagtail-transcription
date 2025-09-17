@@ -20,9 +20,9 @@ class TranscriptionAdmin(ModelAdmin):
     """
 
     model = Transcription
-    menu_icon = "doc-full-inverse"
+    icon = menu_icon = "doc-full-inverse"
     base_url_path = "transcription"
-    menu_order = 200
+    order = menu_order = 200
     list_display = (
         "title",
         "video",
@@ -84,7 +84,7 @@ class TranscriptionAdmin(ModelAdmin):
         return SubmenuMenuItem(
             "Documents",
             submenu,
-            classnames="doc-full-inverse",
+            classname="doc-full-inverse",
             name="custom-documents",
         )
 
