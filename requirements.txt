@@ -3,4 +3,5 @@ wagtail>=7.0
 python-docx>=0.8.11
 pytube>=12.1.0
 psycopg
+--no-deps
 git+https://github.com/django-notifications/django-notifications.git
