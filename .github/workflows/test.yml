@@ -1,0 +1,37 @@
+name: Wagtail-Transcription GA Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        wagtail-version: ["7.2.1"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install wagtail==${{ matrix.wagtail-version }}
+      - name: Lint with ruff, flake8 and codespell
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          ruff check ./wagtail_transcription/
+      - name: Test it
+        run: |
+          python testproject/manage.py test wagtail_transcription.tests
