@@ -45,7 +45,7 @@ class ReceiveTranscriptionView(ProcessTranscriptionMixin, View):
             request_body = json.loads(request.body.decode("utf-8"))
             status = request_body.get("status")
             transcript_id = request_body.get("transcript_id")
-        except Exception as e:
+        except Exception:
             logging.exception("message")
             status, transcript_id = None, None
 
@@ -77,7 +77,7 @@ class ReceiveTranscriptionView(ProcessTranscriptionMixin, View):
                 )
                 response_type = "error"
 
-        except Exception as e:
+        except Exception:
             logging.exception("message")
             # If error delete uncompleted Transcription
             Transcription.objects.filter(video_id=video_id).delete()

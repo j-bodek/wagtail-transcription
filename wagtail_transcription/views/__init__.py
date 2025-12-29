@@ -1,2 +1,2 @@
-from .notifications import *
-from .transcription import *
+from .notifications import *  # noqa
+from .transcription import *  # noqa

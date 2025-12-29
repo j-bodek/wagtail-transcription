@@ -1,1 +1,1 @@
-from .test_transcription_model import *
+from .test_transcription_model import *  # noqa

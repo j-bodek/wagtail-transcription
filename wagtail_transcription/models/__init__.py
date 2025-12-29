@@ -1,1 +1,1 @@
-from .transcription import Transcription
+from .transcription import Transcription  # noqa

@@ -58,7 +58,7 @@ def video_data_validation(
         try:
             app, model, instance_id = data.get("parent_instance_str").split(":")
             model = apps.get_model(app, model)
-        except (AttributeError, ValueError, LookupError) as e:
+        except (AttributeError, ValueError, LookupError):
             logging.exception("message")
             # If there is error independent from user display easy error message
             return get_error_response(
@@ -72,7 +72,7 @@ def video_data_validation(
         try:
             parent_instance = model.objects.get(id=str(instance_id))
             getattr(parent_instance, data.get("transcription_field"))
-        except (AttributeError, ValueError, LookupError) as e:
+        except (AttributeError, ValueError, LookupError):
             logging.exception("message")
             # If there is error independent from user display easy error message
             return get_error_response(

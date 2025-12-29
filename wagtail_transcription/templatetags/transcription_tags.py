@@ -1,9 +1,8 @@
-from django import template
 from django.template.defaulttags import register
 from django.db import models
 from typing import Type
 
-register = template.Library()
+# register = template.Library()
 
 
 @register.filter

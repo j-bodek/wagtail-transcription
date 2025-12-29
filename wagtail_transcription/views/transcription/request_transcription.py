@@ -88,7 +88,7 @@ class RequestTranscriptionView(View):
 
             return JsonResponse({"class": "success", "type": "success"})
 
-        except Exception as e:
+        except Exception:
             logging.exception("message")
             return JsonResponse(
                 {
