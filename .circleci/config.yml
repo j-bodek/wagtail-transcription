@@ -9,9 +9,9 @@ jobs:
   build-and-test:
     docker:
 
-      - image: cimg/python:3.10.2
+      - image: cimg/python:3.12.2
     # Service container image
-      - image: cimg/postgres:14.0
+      - image: cimg/postgres:16.0
         environment:
           POSTGRES_USER: user
     steps:
