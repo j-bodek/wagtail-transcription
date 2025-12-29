@@ -1,5 +1,4 @@
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-import six
 from django.utils.crypto import constant_time_compare, salted_hmac
 from django.utils.http import base36_to_int, int_to_base36
 from django.contrib.auth import get_user_model
@@ -82,10 +81,7 @@ class ValidatedVideoDataTokenGenerator(PasswordResetTokenGenerator):
         was validated or not
         """
         return (
-            six.text_type(user.pk)
-            + six.text_type(user.email)
-            + six.text_type(video_id)
-            + six.text_type(timestamp)
+            str(user.pk) + str(user.email) + str(video_id) + str(timestamp)
         )
 
 
