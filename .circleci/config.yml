@@ -42,8 +42,8 @@ jobs:
           path: test-reports/
           destination: python_app
 
-workflows:
-  wagtail_transcription-test: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
-    jobs:
-      - build-and-test
+workflows: {}
+#  wagtail_transcription-test: # This is the name of the workflow, feel free to change it to better match your workflow.
+#    # Inside the workflow, you define the jobs you want to run.
+#    jobs:
+#      - build-and-test
