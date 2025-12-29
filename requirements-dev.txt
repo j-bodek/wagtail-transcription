@@ -1,3 +1,4 @@
+setuptools
 ruff
 -r requirements.txt
 -e .
