@@ -164,3 +164,16 @@ class YourReceiveTranscriptionView(ReceiveTranscriptionView):
 		...
 		super().process_transcription_response(transcription_response, 	video_id, model_instance_str, field_name, transcription_field)
 ```
+
+## Unit testing
+
+Use either django test runner, or pytest with pytest-django.
+Start in repo root folder.
+
+```
+python testproject/manage.py test wagtail_transcription
+```
+or
+```
+pytest wagtail_transcription
+```
